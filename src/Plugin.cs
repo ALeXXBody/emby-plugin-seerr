@@ -51,6 +51,8 @@ namespace Emby.Plugin.Seerr
                     MenuSection = "",
                     IsMainConfigPage = false
                 },
+                // Permanent in-app Requests page (native Emby dashboard view, no iframe).
+                // Appears in user menu via EnableInUserMenu; sidebar webmod links here too.
                 new PluginPageInfo
                 {
                     Name = "seerrreq",
@@ -58,6 +60,7 @@ namespace Emby.Plugin.Seerr
                     EmbeddedResourcePath = "Emby.Plugin.Seerr.Ui.requestpage.html",
                     EnableInMainMenu = false,
                     EnableInUserMenu = true,
+                    MenuIcon = "movie_filter",
                     MenuSection = "",
                     IsMainConfigPage = false
                 },
@@ -71,6 +74,7 @@ namespace Emby.Plugin.Seerr
                     MenuSection = "",
                     IsMainConfigPage = false
                 },
+                // Standalone full-page UI still available at /emby/Seerr/Ui (phones / TV browsers)
                 new PluginPageInfo
                 {
                     Name = "seerrui",

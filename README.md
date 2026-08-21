@@ -109,12 +109,23 @@ it should return `{"ok":true}`.
 
 ## Usage
 
+### Inside Emby Web (permanent page)
+
+After install, open **Requests** from:
+
+- the **sidebar** (webmod patch), or  
+- the **user menu** (plugin page with `EnableInUserMenu`), or  
+- direct hash: `http://<emby-host>:8096/web/index.html#!/configurationpage?name=seerrreq`
+
+This is a **native Emby dashboard page** (HTML + BaseView controller using `ApiClient`).
+No iframe — same auth session as the rest of Emby Web.
+
+### Standalone page (phones / TV browsers)
+
 Open **`http://<emby-host>:8096/emby/Seerr/Ui`**, log in with any Emby account.
 
-The UI opens on a **Trending** wall (no typing needed); use the *Search* tab to look
-up specific titles, *Recent* for request history.
-Tap/click any poster to open a **recommendations modal** — Seerr-style "more like
-this" suggestions, each requestable, with drill-down.
+Both UIs open on a **Trending** wall; use *Search* for titles, *Recent* for history.
+Tap/click a poster for **recommendations**.
 
 ### On TVs
 

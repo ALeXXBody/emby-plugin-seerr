@@ -1,48 +1,46 @@
 define(["exports"], function (_exports) {
-    function accessToken() {
-        try {
-            if (typeof ApiClient !== "undefined" && ApiClient.accessToken) {
-                return ApiClient.accessToken() || "";
-            }
-        } catch (e) { /* ignore */ }
-        return "";
-    }
-
-    function uiUrl() {
-        var url = "/emby/Seerr/Ui";
-        var t = accessToken();
-        if (t) {
-            url += "?api_key=" + encodeURIComponent(t);
-        }
-        return url;
-    }
-
+    /**
+     * Home "Requests" tab: navigate into the permanent plugin page
+     * (configurationpage?name=seerrreq) which is a real Emby BaseView —
+     * no iframe, uses ApiClient auth.
+     */
     function SeerrTab(view) {
         this.view = view;
-        this.iframe = null;
         if (view) {
-            view.style.cssText = (view.getAttribute("style") || "") +
-                ";position:relative;flex:1 1 auto;min-height:0;height:100%;width:100%;";
+            view.innerHTML =
+                '<div class="padded-left padded-right padded-top padded-bottom" style="text-align:center;margin-top:40px;">' +
+                '<p class="secondaryText">Opening Requests…</p>' +
+                '</div>';
         }
-        var f = document.createElement("iframe");
-        f.src = uiUrl();
-        f.setAttribute("allow", "fullscreen");
-        f.setAttribute("title", "Requests");
-        f.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#0f1115";
-        (view || document.body).appendChild(f);
-        this.iframe = f;
+        this._go();
     }
+
+    SeerrTab.prototype._go = function () {
+        try {
+            if (typeof Emby !== 'undefined' && Emby.importModule) {
+                Emby.importModule('./modules/approuter.js').then(function (appRouter) {
+                    var r = appRouter && (appRouter.default || appRouter);
+                    if (r && r.show) {
+                        r.show('configurationpage?name=seerrreq');
+                        return;
+                    }
+                    window.location.hash = '#!/configurationpage?name=seerrreq';
+                }).catch(function () {
+                    window.location.hash = '#!/configurationpage?name=seerrreq';
+                });
+                return;
+            }
+        } catch (e) { /* fall through */ }
+        window.location.hash = '#!/configurationpage?name=seerrreq';
+    };
+
     SeerrTab.prototype.onResume = function () {
-        if (this.iframe && (!this.iframe.src || this.iframe.src === "about:blank")) {
-            this.iframe.src = uiUrl();
-        }
+        this._go();
     };
     SeerrTab.prototype.onPause = function () { };
     SeerrTab.prototype.destroy = function () {
-        if (this.iframe) {
-            this.iframe.remove();
-            this.iframe = null;
-        }
+        this.view = null;
     };
+
     _exports.default = SeerrTab;
 });
