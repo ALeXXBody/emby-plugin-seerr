@@ -11,11 +11,14 @@ set -euo pipefail
 
 UI="${1:-/opt/emby-server/system/dashboard-ui}"
 HOME_JS="$UI/home/home.js"
+NAV_JS="$UI/modules/navdrawer/navdrawercontent.js"
 MOD_SRC="$(cd "$(dirname "$0")" && pwd)/home/seerrtab.js"
 MOD_DST="$UI/home/seerrtab.js"
 RAW="https://raw.githubusercontent.com/ALeXXBody/emby-plugin-seerr/main/webmod/home/seerrtab.js"
 
-[[ -f "$HOME_JS" ]] || { echo "ERROR: $HOME_JS not found"; exit 1; }
+for f in "$HOME_JS" "$NAV_JS"; do
+  [[ -f "$f" ]] || { echo "ERROR: $f not found"; exit 1; }
+done
 
 if [[ -f "$MOD_SRC" ]]; then
   cp "$MOD_SRC" "$MOD_DST"
@@ -23,7 +26,7 @@ else
   curl -fsSL "$RAW" -o "$MOD_DST"
 fi
 
-python3 - "$HOME_JS" <<'EOF'
+python3 - "$HOME_JS" "$NAV_JS" <<'EOF'
 import sys, shutil
 
 path = sys.argv[1]
@@ -55,6 +58,30 @@ if src != orig:
     print("patched:", path)
 else:
     print("already patched:", path)
+
+# --- patch 2: main navigation drawer -> add "Requests" entry after Search ---
+nav = sys.argv[2]
+src = open(nav, encoding="utf-8").read()
+orig = src
+
+ANCHOR = 'ItemClass:"drawer-search",navMenuId:"search"})'
+INSERT = (ANCHOR +
+          ',menuItems.push({Name:"Requests",Icon:"&#xe04b;",'
+          'href:"/web/configurationpage?name=seerrreq",navMenuId:"requests"})')
+
+if 'navMenuId:"requests"' in src:
+    pass
+elif ANCHOR in src:
+    src = src.replace(ANCHOR, INSERT, 1)
+else:
+    print("WARN: drawer anchor not found - skipping navdrawer patch")
+
+if src != orig:
+    shutil.copyfile(nav, nav + ".orig")
+    open(nav, "w", encoding="utf-8").write(src)
+    print("patched:", nav)
+else:
+    print("already patched / skipped:", nav)
 EOF
 
 echo "done. Restart Emby and hard-refresh the browser (Ctrl+F5)."
