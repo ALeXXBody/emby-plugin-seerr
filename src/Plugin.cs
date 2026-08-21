@@ -53,6 +53,26 @@ namespace Emby.Plugin.Seerr
                 },
                 new PluginPageInfo
                 {
+                    Name = "seerrreq",
+                    DisplayName = "Requests",
+                    EmbeddedResourcePath = "Emby.Plugin.Seerr.Ui.requestpage.html",
+                    EnableInMainMenu = false,
+                    EnableInUserMenu = true,
+                    MenuSection = "",
+                    IsMainConfigPage = false
+                },
+                new PluginPageInfo
+                {
+                    Name = "seerrreqjs",
+                    DisplayName = "Requests",
+                    EmbeddedResourcePath = "Emby.Plugin.Seerr.Ui.requestpage.js",
+                    EnableInMainMenu = false,
+                    EnableInUserMenu = false,
+                    MenuSection = "",
+                    IsMainConfigPage = false
+                },
+                new PluginPageInfo
+                {
                     Name = "seerrui",
                     DisplayName = "Seerr Requests",
                     EmbeddedResourcePath = "Emby.Plugin.Seerr.Ui.index.html",
