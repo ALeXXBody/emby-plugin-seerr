@@ -20,6 +20,16 @@ namespace Emby.Plugin.Seerr.Api
         public int Page { get; set; } = 1;
     }
 
+    [Route("/Seerr/Recommended", "GET", Summary = "Titles recommended for a movie or show")]
+    public class GetSeerrRecommended : IReturn<string>
+    {
+        /// <summary>movie or tv</summary>
+        public string MediaType { get; set; }
+
+        /// <summary>TheMovieDB id</summary>
+        public int TmdbId { get; set; }
+    }
+
     [Route("/Seerr/Requests", "GET", Summary = "Recent Seerr requests")]
     public class GetSeerrRequests : IReturn<string>
     {

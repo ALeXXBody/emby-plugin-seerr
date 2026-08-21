@@ -94,6 +94,30 @@ namespace Emby.Plugin.Seerr.Api
             }
         }
 
+        // GET /Seerr/Recommended?mediaType=&tmdbId=
+        public object Get(GetSeerrRecommended request)
+        {
+            var mediaType = (request.MediaType ?? "").Trim().ToLowerInvariant();
+            if (mediaType != "movie" && mediaType != "tv")
+            {
+                return Json(400, "{\"error\":\"mediaType must be movie or tv\"}");
+            }
+            if (request.TmdbId <= 0)
+            {
+                return Json(400, "{\"error\":\"invalid tmdbId\"}");
+            }
+            try
+            {
+                var r = SeerrClient.GetAsync("/api/v1/" + mediaType + "/" + request.TmdbId + "/recommendations?page=1")
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                return Json(r.Status == 200 ? 200 : 502, r.Body);
+            }
+            catch (Exception ex)
+            {
+                return Json(502, "{\"error\":" + Quote(Sanitize(ex.Message)) + "}");
+            }
+        }
+
         // GET /Seerr/Requests?take=&skip=
         public object Get(GetSeerrRequests request)
         {

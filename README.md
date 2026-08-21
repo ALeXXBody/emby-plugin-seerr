@@ -80,6 +80,8 @@ Open **`http://<emby-host>:8096/emby/Seerr/Ui`**, log in with any Emby account.
 
 The UI opens on a **Trending** wall (no typing needed); use the *Search* tab to look
 up specific titles, *Recent* for request history.
+Tap/click any poster to open a **recommendations modal** — Seerr-style "more like
+this" suggestions, each requestable, with drill-down.
 
 ### On TVs
 
@@ -119,6 +121,7 @@ All require Emby authentication.
 | `/emby/Seerr/Ui` | GET | Mobile/TV request UI (HTML) |
 | `/emby/Seerr/Ping` | GET | Config/connectivity check → `{"ok":true}` |
 | `/emby/Seerr/Discover?page=` | GET | Trending movies & shows |
+| `/emby/Seerr/Recommended?mediaType=&tmdbId=` | GET | Titles recommended for a given title |
 | `/emby/Seerr/Search?query=` | GET | Proxy to Seerr search |
 | `/emby/Seerr/Requests?take=&skip=` | GET | Recent requests |
 | `/emby/Seerr/Request` | POST | Create request — body: `{"mediaType":"movie"\|"tv","mediaId":123,"seasons":"1,2"}` (`seasons` optional, TV only) |
