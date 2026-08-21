@@ -67,7 +67,7 @@ orig = src
 ANCHOR = 'ItemClass:"drawer-search",navMenuId:"search"})'
 INSERT = (ANCHOR +
           ',menuItems.push({Name:"Requests",Icon:"&#xe04b;",'
-          'href:"/web/configurationpage?name=seerrreq",navMenuId:"requests"})')
+          'href:"/emby/Seerr/Ui",navMenuId:"requests"})')
 
 if 'navMenuId:"requests"' in src:
     pass
