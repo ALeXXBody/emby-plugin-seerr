@@ -90,6 +90,20 @@ Native Emby TV apps can't host plugin UIs, but the page works in TV browsers:
 - **Android TV / Fire TV:** install [TV Bro](https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser)
   (free, open source, remote-friendly) and set the Ui URL as its homepage.
 
+### Optional: "Requests" tab in Emby Web home
+
+Want a tab next to *Home* and *Favorites* in the browser UI? That tab bar is
+hardcoded in Emby's web bundle — no plugin API exists for it — but this repo ships
+an unsupported patch that injects one (embeds the request UI in an iframe):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ALeXXBody/emby-plugin-seerr/main/webmod/install-webmod.sh | sudo bash -
+```
+
+- Tested on Emby 4.10.0.25; anchors are checked, so incompatible versions abort safely.
+- **Re-run after every Emby Server update** (updates replace the web files).
+- Undo: restore `home.js.orig` next to the patched file.
+
 ### Phone "app"
 
 1. Log into Emby Web once in the phone browser.
