@@ -37,11 +37,44 @@ Browser ──> Emby Server ──> Seerr plugin (this repo)
 
 ## Install
 
-### 1. Download the plugin
+### One-shot (recommended, Linux)
 
-Grab `Emby.Plugin.Seerr.zip` from the [latest release](../../releases/latest) and unzip it.
+On the **Emby host**, as root:
 
-### 2. Copy the DLL into your Emby plugins folder
+```bash
+curl -fsSL https://raw.githubusercontent.com/ALeXXBody/emby-plugin-seerr/main/install.sh | sudo bash
+```
+
+That will:
+
+1. Download the latest release (`Emby.Plugin.Seerr.dll`)
+2. Install it into the Emby plugins folder
+3. Patch Emby Web (home **Requests** tab + sidebar entry)
+4. Restart Emby
+
+Optional flags:
+
+```bash
+# Pin a version + write Seerr settings via API
+curl -fsSL https://raw.githubusercontent.com/ALeXXBody/emby-plugin-seerr/main/install.sh | sudo bash -s -- \
+  --version v1.3.1 \
+  --seerr-url http://192.168.1.10:5055 \
+  --seerr-key YOUR_SEERR_API_KEY \
+  --emby-token YOUR_EMBY_API_KEY
+
+# DLL only (no web UI patch, no restart)
+sudo bash install.sh --no-webmod --no-restart --plugins-dir /var/lib/emby/plugins
+```
+
+Re-run after every **Emby Server update** (updates replace the web files).
+
+### Manual install
+
+#### 1. Download the plugin
+
+Grab `Emby.Plugin.Seerr.dll` (or the `.tar.gz`) from the [latest release](../../releases/latest).
+
+#### 2. Copy the DLL into your Emby plugins folder
 
 Emby loads plugins from the **data folder** (`plugins/` subfolder):
 
@@ -55,13 +88,13 @@ Emby loads plugins from the **data folder** (`plugins/` subfolder):
 sudo chown emby:emby /var/lib/emby/plugins/Emby.Plugin.Seerr.dll
 ```
 
-### 3. Restart Emby Server
+#### 3. Restart Emby Server
 
 ```bash
 sudo systemctl restart emby-server
 ```
 
-### 4. Configure
+#### 4. Configure
 
 Dashboard → **Plugins** → **Seerr Requests** → **Settings**:
 
@@ -92,11 +125,9 @@ Native Emby TV apps can't host plugin UIs, but the page works in TV browsers:
 - **Android TV / Fire TV:** install [TV Bro](https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser)
   (free, open source, remote-friendly) and set the Ui URL as its homepage.
 
-### Optional: "Requests" tab in Emby Web home
+### Optional: "Requests" tab + sidebar (Emby Web)
 
-Want a tab next to *Home* and *Favorites* in the browser UI? That tab bar is
-hardcoded in Emby's web bundle — no plugin API exists for it — but this repo ships
-an unsupported patch that injects one (embeds the request UI in an iframe):
+Included automatically by `install.sh`. To patch only the web UI:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ALeXXBody/emby-plugin-seerr/main/webmod/install-webmod.sh | sudo bash -
@@ -104,7 +135,7 @@ curl -fsSL https://raw.githubusercontent.com/ALeXXBody/emby-plugin-seerr/main/we
 
 - Tested on Emby 4.10.0.25; anchors are checked, so incompatible versions abort safely.
 - **Re-run after every Emby Server update** (updates replace the web files).
-- Undo: restore `home.js.orig` next to the patched file.
+- Undo: restore `home.js.orig` / `navdrawercontent.js.orig` next to the patched files.
 
 ### Phone "app"
 
