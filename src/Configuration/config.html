@@ -1,65 +1,31 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Seerr Requests</title>
-</head>
-<body>
-<div data-role="page" class="page type-interior pluginConfigurationPage seerrConfigPage" data-helpurl="https://github.com/ALeXXBody/emby-plugin-seerr">
-  <div data-role="content">
-    <div class="content-primary">
-      <form id="SeerrConfigForm" style="max-width:640px">
-        <h2>Seerr Requests</h2>
-        <p style="color:#888">Link your Seerr (Overseerr/Jellyseerr) instance. Users then open <b>/emby/Seerr/Ui</b> to browse &amp; request media.</p>
+<div is="emby-scroller" class="view flex flex-direction-column scrollFrameY flex-grow withTabs" data-horizontal="false" data-forcescrollbar="true" data-centerfocus="true" data-bindheader="true" data-title="Seerr Requests" data-helpurl="https://github.com/ALeXXBody/emby-plugin-seerr" data-controller="__plugin/seerrconfigjs">
+    <div class="scrollSlider flex-grow flex-direction-column padded-left padded-left-page padded-right padded-top-page padded-bottom-page settingsContainer">
+        <form class="seerrConfigForm auto-center" style="max-width:640px">
 
-        <div class="inputContainer">
-          <label class="inputLabel" for="SeerrUrl">Seerr URL</label>
-          <input is="emby-input" id="SeerrUrl" type="url" placeholder="http://192.168.1.10:5055" />
-          <div class="fieldDescription">Base URL of your Seerr server.</div>
-        </div>
+            <h2>Seerr Requests</h2>
+            <p style="color:#888">Link your Seerr (Overseerr/Jellyseerr) instance. Users then open <b>/emby/Seerr/Ui</b> to browse &amp; request media.</p>
 
-        <div class="inputContainer">
-          <label class="inputLabel" for="SeerrApiKey">Seerr API Key</label>
-          <input is="emby-input" id="SeerrApiKey" type="password" placeholder="API key" />
-          <div class="fieldDescription">Seerr &rarr; Settings &rarr; General &rarr; API Key.</div>
-        </div>
+            <div class="inputContainer">
+                <label class="inputLabel" for="SeerrUrl">Seerr URL</label>
+                <input is="emby-input" id="SeerrUrl" type="url" placeholder="http://192.168.1.10:5055" />
+                <div class="fieldDescription">Base URL of your Seerr server.</div>
+            </div>
 
-        <div class="inputContainer">
-          <label class="inputLabel" for="AllowedUsers">Allowed users (optional)</label>
-          <input is="emby-input" id="AllowedUsers" type="text" placeholder="alice,bob" />
-          <div class="fieldDescription">Comma separated Emby user names allowed to use the request UI. Leave empty for everyone.</div>
-        </div>
+            <div class="inputContainer">
+                <label class="inputLabel" for="SeerrApiKey">Seerr API Key</label>
+                <input is="emby-input" id="SeerrApiKey" type="password" placeholder="API key" />
+                <div class="fieldDescription">Seerr &#8594; Settings &#8594; General &#8594; API Key.</div>
+            </div>
 
-        <button is="emby-button" type="submit" class="raised button-submit block">
-          <span>Save</span>
-        </button>
-      </form>
+            <div class="inputContainer">
+                <label class="inputLabel" for="AllowedUsers">Allowed users (optional)</label>
+                <input is="emby-input" id="AllowedUsers" type="text" placeholder="alice,bob" />
+                <div class="fieldDescription">Comma separated Emby user names allowed to use the request UI. Leave empty for everyone.</div>
+            </div>
+
+            <button is="emby-button" type="submit" class="raised button-submit block">
+                <span>Save</span>
+            </button>
+        </form>
     </div>
-  </div>
 </div>
-<script>
-(function () {
-  var pid = '6f2b9c4e-1d5a-4f83-9e07-2c8b41d0a77e';
-
-  function fill(cfg) {
-    document.getElementById('SeerrUrl').value = cfg.SeerrUrl || '';
-    document.getElementById('SeerrApiKey').value = cfg.SeerrApiKey || '';
-    document.getElementById('AllowedUsers').value = cfg.AllowedUsers || '';
-  }
-
-  ApiClient.getPluginConfiguration(pid).then(fill);
-
-  document.getElementById('SeerrConfigForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-    ApiClient.getPluginConfiguration(pid).then(function (cfg) {
-      cfg.SeerrUrl = document.getElementById('SeerrUrl').value.trim();
-      cfg.SeerrApiKey = document.getElementById('SeerrApiKey').value.trim();
-      cfg.AllowedUsers = document.getElementById('AllowedUsers').value.trim();
-      ApiClient.updatePluginConfiguration(pid, cfg).then(function () {
-        Dashboard.alert('Settings saved.');
-      });
-    });
-  });
-})();
-</script>
-</body>
-</html>
