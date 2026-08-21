@@ -67,17 +67,33 @@ orig = src
 ANCHOR = 'ItemClass:"drawer-search",navMenuId:"search"})'
 INSERT = (ANCHOR +
           ',menuItems.push({Name:"Requests",Icon:"&#xe04b;",'
-          'href:"/emby/Seerr/Ui",navMenuId:"requests"})')
+          'href:"configurationpage?name=seerrreq",navMenuId:"requests"})')
 
-if 'navMenuId:"requests"' in src:
+# Rewrite older drawer hrefs that opened a blank/auth-broken page
+for bad in (
+    'href:"/web/configurationpage?name=seerrreq"',
+    'href:"/emby/Seerr/Ui"',
+    'href:"/emby/seerr/ui"',
+):
+    good = 'href:"configurationpage?name=seerrreq"'
+    if bad in src:
+        src = src.replace(bad, good)
+
+if 'navMenuId:"requests"' in src and 'configurationpage?name=seerrreq' in src:
     pass
 elif ANCHOR in src:
     src = src.replace(ANCHOR, INSERT, 1)
+elif 'navMenuId:"requests"' in src:
+    print("WARN: requests entry present but href could not be normalized")
 else:
     print("WARN: drawer anchor not found - skipping navdrawer patch")
 
 if src != orig:
-    shutil.copyfile(nav, nav + ".orig")
+    if not (nav + ".orig") or True:
+        try:
+            shutil.copyfile(nav, nav + ".orig")
+        except Exception:
+            pass
     open(nav, "w", encoding="utf-8").write(src)
     print("patched:", nav)
 else:

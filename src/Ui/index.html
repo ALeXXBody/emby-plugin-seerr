@@ -81,8 +81,34 @@ button.req:disabled{opacity:.55;cursor:default}
 <script>
 var $=function(s){return document.querySelector(s)};
 var tmdb='https://image.tmdb.org/t/p/w200';
+var trendPage=1;
+function qs(name){
+ var m=new URLSearchParams(location.search||'').get(name);
+ return m||'';
+}
+function authToken(){
+ return qs('api_key')||qs('ApiKey')||qs('X-Emby-Token')||'';
+}
+function apiUrl(path){
+ var p=String(path||'');
+ if(p.indexOf('http')===0)return p;
+ p=p.replace(/^\.\.\//,'').replace(/^\/+/,'');
+ if(p.indexOf('emby/')!==0)p='emby/Seerr/'+p;
+ p='/'+p;
+ var t=authToken();
+ if(!t)return p;
+ return p+(p.indexOf('?')>=0?'&':'?')+'api_key='+encodeURIComponent(t);
+}
 function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2600)}
-async function api(path,opt){var r=await fetch(path,opt||{credentials:'include'});return{status:r.status,text:await r.text()}}
+async function api(path,opt){
+ opt=opt||{};
+ opt.credentials=opt.credentials||'include';
+ opt.headers=opt.headers||{};
+ var t=authToken();
+ if(t&&!opt.headers['X-Emby-Token'])opt.headers['X-Emby-Token']=t;
+ var r=await fetch(apiUrl(path),opt);
+ return{status:r.status,text:await r.text()}
+}
 function jparse(o){try{return JSON.parse(o.text)}catch(e){return null}}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function badgeFor(st){
@@ -109,7 +135,7 @@ function card(item){
 window.request=function(btn,mt,id){
  if(!id)return;
  btn.disabled=true;btn.textContent='Sending...';
- api('../Request',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({mediaType:mt,mediaId:id})})
+ api('Request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mediaType:mt,mediaId:id})})
  .then(function(r){if(r.status<300){btn.outerHTML='<span class="badge b-req">Pending</span>';toast('Request sent to Seerr')}else{btn.disabled=false;btn.textContent='Retry';var e=jparse(r);toast((e&&e.error)?('Error: '+e.error):('Failed ('+r.status+')'))}});
 };
 window.openRecs=function(el){
@@ -119,7 +145,7 @@ window.openRecs=function(el){
  $('#mtitle').textContent=title;
  $('#msub').textContent='Recommended because of '+title;
  $('#mbody').innerHTML='<div class="spin"></div>';
- api('../Recommended?mediaType='+mt+'&tmdbId='+tid).then(function(r){
+ api('Recommended?mediaType='+mt+'&tmdbId='+tid).then(function(r){
   var d=jparse(r);
   if(r.status!==200||!d||!d.results){$('#mbody').innerHTML='<p class="hint">No recommendations found.</p>';return}
   var cards=d.results.map(card).join('');
@@ -148,7 +174,7 @@ document.querySelectorAll('.tab').forEach(function(t){
 function showIdle(){$('#content').innerHTML='<p class="hint">Type to search for movies and TV shows,<br>then tap a poster to see recommendations.</p>'}
 async function doTrending(append){
  if(!append){$('#content').innerHTML='<div class="spin"></div>';trendPage=1}
- var r=await api('../Discover?page='+trendPage);
+ var r=await api('Discover?page='+trendPage);
  var d=jparse(r);
  if(r.status!==200||!d||!d.results){if(!append)$('#content').innerHTML='<p class="hint">Could not load trending ('+r.status+'). Is the plugin configured?</p>';return}
  var cards=d.results.map(card).join('');
@@ -160,7 +186,7 @@ async function doTrending(append){
 }
 async function doSearch(q){
  $('#content').innerHTML='<div class="spin"></div>';
- var r=await api('../Search?query='+encodeURIComponent(q));
+ var r=await api('Search?query='+encodeURIComponent(q));
  var d=jparse(r);
  if(r.status!==200||!d||!d.results){$('#content').innerHTML='<p class="hint">Search failed ('+r.status+'). Is the plugin configured?</p>';return}
  var cards=d.results.map(card).join('');
@@ -168,7 +194,7 @@ async function doSearch(q){
 }
 async function doRecent(){
  $('#content').innerHTML='<div class="spin"></div>';
- var r=await api('../Requests?take=24');
+ var r=await api('Requests?take=24');
  var d=jparse(r);
  if(r.status!==200||!d||!d.results){$('#content').innerHTML='<p class="hint">Could not load requests ('+r.status+').</p>';return}
  if(!d.results.length){$('#content').innerHTML='<p class="hint">No requests yet.</p>';return}
@@ -183,8 +209,9 @@ async function doRecent(){
  }).join('');
  $('#content').innerHTML='<div class="grid rowlist">'+rows+'</div>';
 }
-api('../Ping').then(function(r){
- $('#dot').className=(r.status===200&&r.text.indexOf('"true"')>-1)?'on':'off';
+api('Ping').then(function(r){
+ var ok=r.status===200&&(r.text.indexOf('"ok":true')>-1||r.text.indexOf('"ok": true')>-1||r.text.indexOf('true')>-1);
+ $('#dot').className=ok?'on':'off';
 }).catch(function(){$('#dot').className='off'});
 doTrending(false);
 </script>
