@@ -36,9 +36,9 @@ namespace Emby.Plugin.Seerr
                     Name = "seerrconfig",
                     DisplayName = "Seerr Requests",
                     EmbeddedResourcePath = "Emby.Plugin.Seerr.Configuration.config.html",
-                    EnableInMainMenu = false,
+                    EnableInMainMenu = true,
                     EnableInUserMenu = false,
-                    MenuSection = "",
+                    MenuSection = "advanced",
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
