@@ -1,0 +1,10 @@
+# Build artifacts
+bin/
+obj/
+libs/*.dll
+*.zip
+
+# IDE
+.vs/
+.idea/
+*.user

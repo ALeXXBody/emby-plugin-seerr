@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>Requests</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--line:#242936;--txt:#e8eaf0;--dim:#9aa1b2;--acc:#7c5cff;--ok:#3fb26f;--warn:#e0a63c;--dl:#4a90d9;--part:#2fa6a0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding-bottom:40px}
+header{position:sticky;top:0;z-index:5;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 16px 10px}
+h1{margin:0;font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px}
+#dot{width:9px;height:9px;border-radius:50%;background:#666;flex:none}
+#dot.on{background:var(--ok)} #dot.off{background:#d95c5c}
+.searchbar{display:flex;gap:8px;margin-top:10px}
+input[type=search]{flex:1;background:var(--card);border:1px solid var(--line);color:var(--txt);padding:11px 14px;border-radius:10px;font-size:16px;outline:none}
+input[type=search]:focus{border-color:var(--acc)}
+.tabs{display:flex;gap:6px;margin-top:10px}
+.tab{background:none;border:1px solid var(--line);color:var(--dim);padding:7px 14px;border-radius:99px;font-size:13px;cursor:pointer}
+.tab.on{background:var(--acc);border-color:var(--acc);color:#fff}
+main{max-width:900px;margin:0 auto;padding:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.poster{position:relative;width:100%;aspect-ratio:2/3;background:#222633}
+.poster img{width:100%;height:100%;object-fit:cover;display:block}
+.noposter{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:30px}
+.meta{padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;flex:1}
+.t{font-size:13px;font-weight:600;line-height:1.25;max-height:32px;overflow:hidden}
+.y{font-size:11px;color:var(--dim)}
+button.req{margin-top:auto;width:100%;border:0;border-radius:8px;padding:9px 0;font-size:13px;font-weight:700;color:#fff;background:var(--acc);cursor:pointer}
+button.req:disabled{opacity:.55;cursor:default}
+.badge{align-self:flex-start;font-size:10px;font-weight:800;letter-spacing:.4px;padding:3px 8px;border-radius:99px;text-transform:uppercase}
+.b-req{background:var(--warn);color:#231a05}
+.b-proc{background:var(--dl);color:#fff}
+.b-part{background:var(--part);color:#fff}
+.b-ok{background:var(--ok);color:#03130a}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#23283a;color:var(--txt);padding:11px 18px;border-radius:12px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.25s;z-index:50;max-width:88vw;text-align:center}
+.toast.show{opacity:1}
+.hint{color:var(--dim);font-size:13px;text-align:center;margin:40px 16px;line-height:1.6}
+.spin{width:34px;height:34px;margin:60px auto;border:3px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <h1><span id="dot"></span>Requests</h1>
+  <div class="searchbar">
+    <input id="q" type="search" placeholder="Search movies &amp; shows..." autocomplete="off">
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-tab="search">Discover</button>
+    <button class="tab" data-tab="mine">Recent</button>
+  </div>
+</header>
+<main id="content"><p class="hint">Type to search for movies and TV shows,<br>then tap Request to send it to Seerr.</p></main>
+<div class="toast" id="toast"></div>
+<script>
+var $=function(s){return document.querySelector(s)};
+var tmdb='https://image.tmdb.org/t/p/w200';
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2600)}
+async function api(path,opt){var r=await fetch(path,opt||{credentials:'include'});return{status:r.status,text:await r.text()}}
+function jparse(o){try{return JSON.parse(o.text)}catch(e){return null}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function badgeFor(st){
+ if(st===5)return'<span class="badge b-ok">Available</span>';
+ if(st===4)return'<span class="badge b-part">Partial</span>';
+ if(st===3)return'<span class="badge b-proc">Processing</span>';
+ if(st===2)return'<span class="badge b-req">Pending</span>';
+ return'';
+}
+function card(item){
+ var mt=item.mediaType;
+ if(mt==='person'||mt==='network')return'';
+ var title=mt==='movie'?item.title:(item.name||item.title);
+ var year=(mt==='movie'?item.releaseDate:(item.firstAirDate||''))||'';
+ year=year?String(year).slice(0,4):'';
+ var st=item.mediaInfo?item.mediaInfo.status:0;
+ var poster=item.posterPath?tmdb+item.posterPath:'';
+ var btn=(st>=2&&st<=5)?'':('<button class="req" onclick="request(this,\''+mt+'\','+(item.id||0)+')">Request</button>');
+ return '<div class="card"><div class="poster">'+(poster?'<img loading="lazy" src="'+poster+'">':'<div class="noposter">&#127916;</div>')+'</div>'+
+   '<div class="meta"><span class="t">'+esc(title)+'</span><span class="y">'+year+'</span>'+badgeFor(st)+btn+'</div></div>';
+}
+window.request=function(btn,mt,id){
+ if(!id)return;
+ btn.disabled=true;btn.textContent='Sending...';
+ api('../Request',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({mediaType:mt,mediaId:id})})
+ .then(function(r){if(r.status<300){btn.outerHTML='<span class="badge b-req">Pending</span>';toast('Request sent to Seerr')}else{btn.disabled=false;btn.textContent='Retry';var e=jparse(r);toast((e&&e.error)?('Error: '+e.error):('Failed ('+r.status+')'))}});
+};
+var timer=null,lastQ='';
+$('#q').addEventListener('input',function(){
+ clearTimeout(timer);
+ var v=this.value.trim();
+ timer=setTimeout(function(){if(v!==lastQ){lastQ=v;if(v.length>=2)doSearch(v);else if(!v)showIdle()}},420);
+});
+document.querySelectorAll('.tab').forEach(function(t){
+ t.addEventListener('click',function(){
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+  t.classList.add('on');
+  if(t.dataset.tab==='search'){$('#q').value='';showIdle();$('#q').focus()}
+  else doRecent();
+ });
+});
+function showIdle(){$('#content').innerHTML='<p class="hint">Type to search for movies and TV shows,<br>then tap Request to send it to Seerr.</p>'}
+async function doSearch(q){
+ $('#content').innerHTML='<div class="spin"></div>';
+ var r=await api('../Search?query='+encodeURIComponent(q));
+ var d=jparse(r);
+ if(r.status!==200||!d||!d.results){$('#content').innerHTML='<p class="hint">Search failed ('+r.status+'). Is the plugin configured?</p>';return}
+ var cards=d.results.map(card).join('');
+ $('#content').innerHTML=cards?'<div class="grid">'+cards+'</div>':'<p class="hint">No results for &quot;'+esc(q)+'&quot;</p>';
+}
+async function doRecent(){
+ $('#content').innerHTML='<div class="spin"></div>';
+ var r=await api('../Requests?take=24');
+ var d=jparse(r);
+ if(r.status!==200||!d||!d.results){$('#content').innerHTML='<p class="hint">Could not load requests ('+r.status+').</p>';return}
+ if(!d.results.length){$('#content').innerHTML='<p class="hint">No requests yet.</p>';return}
+ var rows=d.results.map(function(req){
+  var m=req.media||{};
+  var title=req.is4k?(m.title4k||m.title):(m.title||m.name);
+  var poster=(req.is4k?(m.posterPath4k||m.posterPath):m.posterPath)||'';
+  var who=req.requestedBy&&req.requestedBy.displayName?('<span class="y">by '+esc(req.requestedBy.displayName)+'</span>'):'';
+  var st=req.status===1?2:(req.status===2?3:req.status===3?5:2);
+  return '<div class="card"><div class="poster">'+(poster?'<img src="'+tmdb+poster+'">':'<div class="noposter">&#127916;</div>')+'</div>'+
+    '<div class="meta"><span class="t">'+esc(title)+'</span>'+who+badgeFor(st)+'</div></div>';
+ }).join('');
+ $('#content').innerHTML='<div class="grid rowlist">'+rows+'</div>';
+}
+api('../Ping').then(function(r){
+ $('#dot').className=(r.status===200&&r.text.indexOf('"true"')>-1)?'on':'off';
+}).catch(function(){$('#dot').className='off'});
+</script>
+</body>
+</html>
