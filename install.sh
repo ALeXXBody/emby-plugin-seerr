@@ -50,7 +50,7 @@ Options:
   --emby-token TOKEN     Emby API key (required for --seerr-url/--seerr-key)
   --emby-url URL         Emby base URL (default http://127.0.0.1:8096)
   --allow-users LIST     Optional Emby user allow-list (comma-separated)
-  --no-webmod            Skip home tab + sidebar patch
+  --no-webmod            Skip sidebar Requests patch
   --no-restart           Do not restart Emby
   -h, --help             Show this help
 
@@ -213,11 +213,6 @@ print("")
     cp "$found" "$WORK/$PLUGIN_DLL_NAME"
   fi
 
-  # pull seerrtab + webmod installer if missing (from same release or raw main)
-  if [[ ! -f "$WORK/seerrtab.js" ]]; then
-    curl -fsSL "https://raw.githubusercontent.com/${REPO}/main/webmod/home/seerrtab.js" \
-      -o "$WORK/seerrtab.js" || warn "could not download seerrtab.js"
-  fi
   if [[ ! -f "$WORK/install-webmod.sh" ]]; then
     curl -fsSL "https://raw.githubusercontent.com/${REPO}/main/webmod/install-webmod.sh" \
       -o "$WORK/install-webmod.sh" || true
@@ -262,18 +257,7 @@ install_webmod() {
   DASHBOARD_UI="$ui"
   log "Dashboard UI: $DASHBOARD_UI"
 
-  # Prefer bundled install-webmod.sh; else inline minimal copy of seerrtab + call
-  if [[ -x "$WORK/install-webmod.sh" ]] || [[ -f "$WORK/install-webmod.sh" ]]; then
-    # ensure seerrtab sits next to install-webmod layout if needed
-    mkdir -p "$WORK/home"
-    if [[ -f "$WORK/seerrtab.js" && ! -f "$WORK/home/seerrtab.js" ]]; then
-      cp "$WORK/seerrtab.js" "$WORK/home/seerrtab.js"
-    fi
-    # install-webmod expects webmod/home/seerrtab.js relative to itself
-    if [[ ! -f "$(dirname "$WORK/install-webmod.sh")/home/seerrtab.js" ]]; then
-      mkdir -p "$(dirname "$WORK/install-webmod.sh")/home"
-      [[ -f "$WORK/seerrtab.js" ]] && cp "$WORK/seerrtab.js" "$(dirname "$WORK/install-webmod.sh")/home/seerrtab.js"
-    fi
+  if [[ -f "$WORK/install-webmod.sh" ]]; then
     bash "$WORK/install-webmod.sh" "$DASHBOARD_UI"
   else
     die "install-webmod.sh missing from release bundle"
@@ -369,16 +353,13 @@ if [[ -n "${SCRIPT_DIR:-}" && -f "$SCRIPT_DIR/release/$PLUGIN_DLL_NAME" ]]; then
   WORK=$(mktemp -d /tmp/emby-seerr-install.XXXXXX)
   trap 'rm -rf "$WORK"' EXIT
   cp "$SCRIPT_DIR/release/$PLUGIN_DLL_NAME" "$WORK/"
-  [[ -f "$SCRIPT_DIR/release/seerrtab.js" ]] && cp "$SCRIPT_DIR/release/seerrtab.js" "$WORK/"
   [[ -f "$SCRIPT_DIR/release/install-webmod.sh" ]] && cp "$SCRIPT_DIR/release/install-webmod.sh" "$WORK/" && chmod +x "$WORK/install-webmod.sh"
-  [[ -f "$SCRIPT_DIR/webmod/home/seerrtab.js" ]] && cp "$SCRIPT_DIR/webmod/home/seerrtab.js" "$WORK/seerrtab.js"
   [[ -f "$SCRIPT_DIR/webmod/install-webmod.sh" ]] && cp "$SCRIPT_DIR/webmod/install-webmod.sh" "$WORK/" && chmod +x "$WORK/install-webmod.sh"
 elif [[ -n "${SCRIPT_DIR:-}" && -f "$SCRIPT_DIR/src/bin/Release/$PLUGIN_DLL_NAME" ]]; then
   log "Using locally built DLL"
   WORK=$(mktemp -d /tmp/emby-seerr-install.XXXXXX)
   trap 'rm -rf "$WORK"' EXIT
   cp "$SCRIPT_DIR/src/bin/Release/$PLUGIN_DLL_NAME" "$WORK/"
-  cp "$SCRIPT_DIR/webmod/home/seerrtab.js" "$WORK/" 2>/dev/null || true
   cp "$SCRIPT_DIR/webmod/install-webmod.sh" "$WORK/" 2>/dev/null || true
   chmod +x "$WORK/install-webmod.sh" 2>/dev/null || true
 else

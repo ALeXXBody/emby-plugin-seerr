@@ -49,7 +49,7 @@ That will:
 
 1. Download the latest release (`Emby.Plugin.Seerr.dll`)
 2. Install it into the Emby plugins folder
-3. Patch Emby Web (home **Requests** tab + sidebar entry)
+3. Patch Emby Web sidebar (**Requests** entry)
 4. Restart Emby
 
 Optional flags:
@@ -117,8 +117,7 @@ After install, open **Requests** from:
 - the **user menu** (plugin page with `EnableInUserMenu`), or  
 - direct hash: `http://<emby-host>:8096/web/index.html#!/configurationpage?name=seerrreq`
 
-This is a **native Emby dashboard page** (HTML + BaseView controller using `ApiClient`).
-No iframe — same auth session as the rest of Emby Web.
+This is a **native Emby dashboard page** (HTML + BaseView + `ApiClient`). No Home tab.
 
 ### Standalone page (phones / TV browsers)
 
@@ -136,17 +135,18 @@ Native Emby TV apps can't host plugin UIs, but the page works in TV browsers:
 - **Android TV / Fire TV:** install [TV Bro](https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser)
   (free, open source, remote-friendly) and set the Ui URL as its homepage.
 
-### Optional: "Requests" tab + sidebar (Emby Web)
+### Optional: sidebar "Requests" entry (Emby Web)
 
-Included automatically by `install.sh`. To patch only the web UI:
+Included automatically by `install.sh`. Sidebar-only patch:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ALeXXBody/emby-plugin-seerr/main/webmod/install-webmod.sh | sudo bash -
 ```
 
-- Tested on Emby 4.10.0.25; anchors are checked, so incompatible versions abort safely.
-- **Re-run after every Emby Server update** (updates replace the web files).
-- Undo: restore `home.js.orig` / `navdrawercontent.js.orig` next to the patched files.
+- Adds **Requests** after Search in the main drawer → native plugin page.
+- Also **removes** any older Home "Requests" tab patch if present.
+- **Re-run after every Emby Server update**.
+- Undo: restore `navdrawercontent.js.orig` (and `home.js.orig` / `home.html.orig` if those were patched).
 
 ### Phone "app"
 
