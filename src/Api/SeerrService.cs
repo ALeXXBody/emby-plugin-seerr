@@ -78,6 +78,22 @@ namespace Emby.Plugin.Seerr.Api
             }
         }
 
+        // GET /Seerr/Discover?page=
+        public object Get(GetSeerrDiscover request)
+        {
+            var page = request.Page < 1 ? 1 : (request.Page > 500 ? 500 : request.Page);
+            try
+            {
+                var r = SeerrClient.GetAsync("/api/v1/discover/trending?page=" + page)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                return Json(r.Status == 200 ? 200 : 502, r.Body);
+            }
+            catch (Exception ex)
+            {
+                return Json(502, "{\"error\":" + Quote(Sanitize(ex.Message)) + "}");
+            }
+        }
+
         // GET /Seerr/Requests?take=&skip=
         public object Get(GetSeerrRequests request)
         {

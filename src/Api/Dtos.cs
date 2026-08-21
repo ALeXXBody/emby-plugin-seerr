@@ -14,6 +14,12 @@ namespace Emby.Plugin.Seerr.Api
         public string Query { get; set; }
     }
 
+    [Route("/Seerr/Discover", "GET", Summary = "Trending movies & shows from Seerr")]
+    public class GetSeerrDiscover : IReturn<string>
+    {
+        public int Page { get; set; } = 1;
+    }
+
     [Route("/Seerr/Requests", "GET", Summary = "Recent Seerr requests")]
     public class GetSeerrRequests : IReturn<string>
     {

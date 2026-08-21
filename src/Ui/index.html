@@ -15,7 +15,7 @@ h1{margin:0;font-size:20px;font-weight:700;display:flex;align-items:center;gap:8
 #dot.on{background:var(--ok)} #dot.off{background:#d95c5c}
 .searchbar{display:flex;gap:8px;margin-top:10px}
 input[type=search]{flex:1;background:var(--card);border:1px solid var(--line);color:var(--txt);padding:11px 14px;border-radius:10px;font-size:16px;outline:none}
-input[type=search]:focus{border-color:var(--acc)}
+input[type=search]:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(124,92,255,.35)}
 .tabs{display:flex;gap:6px;margin-top:10px}
 .tab{background:none;border:1px solid var(--line);color:var(--dim);padding:7px 14px;border-radius:99px;font-size:13px;cursor:pointer}
 .tab.on{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -40,6 +40,10 @@ button.req:disabled{opacity:.55;cursor:default}
 .hint{color:var(--dim);font-size:13px;text-align:center;margin:40px 16px;line-height:1.6}
 .spin{width:34px;height:34px;margin:60px auto;border:3px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:s .8s linear infinite}
 @keyframes s{to{transform:rotate(360deg)}}
+.more{display:block;margin:18px auto;padding:10px 26px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:14px;font-weight:700;cursor:pointer}
+/* D-pad / keyboard focus visibility (TV browsers) */
+.tab:focus,.req:focus,.more:focus{outline:3px solid var(--acc);outline-offset:2px}
+.req:focus{transform:scale(1.04)}
 </style>
 </head>
 <body>
@@ -49,11 +53,12 @@ button.req:disabled{opacity:.55;cursor:default}
     <input id="q" type="search" placeholder="Search movies &amp; shows..." autocomplete="off">
   </div>
   <div class="tabs">
-    <button class="tab on" data-tab="search">Discover</button>
+    <button class="tab on" data-tab="trending">Trending</button>
+    <button class="tab" data-tab="search">Search</button>
     <button class="tab" data-tab="mine">Recent</button>
   </div>
 </header>
-<main id="content"><p class="hint">Type to search for movies and TV shows,<br>then tap Request to send it to Seerr.</p></main>
+<main id="content"><p class="hint">Loading trending...</p></main>
 <div class="toast" id="toast"></div>
 <script>
 var $=function(s){return document.querySelector(s)};
@@ -97,11 +102,25 @@ document.querySelectorAll('.tab').forEach(function(t){
  t.addEventListener('click',function(){
   document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
   t.classList.add('on');
-  if(t.dataset.tab==='search'){$('#q').value='';showIdle();$('#q').focus()}
+  if(t.dataset.tab==='trending'){trendPage=1;doTrending(false)}
+  else if(t.dataset.tab==='search'){$('#q').value='';showIdle();$('#q').focus()}
   else doRecent();
  });
 });
 function showIdle(){$('#content').innerHTML='<p class="hint">Type to search for movies and TV shows,<br>then tap Request to send it to Seerr.</p>'}
+var trendPage=1;
+async function doTrending(append){
+ if(!append){$('#content').innerHTML='<div class="spin"></div>';trendPage=1}
+ var r=await api('../Discover?page='+trendPage);
+ var d=jparse(r);
+ if(r.status!==200||!d||!d.results){if(!append)$('#content').innerHTML='<p class="hint">Could not load trending ('+r.status+'). Is the plugin configured?</p>';return}
+ var cards=d.results.map(card).join('');
+ if(!cards&&!append){$('#content').innerHTML='<p class="hint">Nothing trending right now.</p>';return}
+ if(append){var old=$('#more');if(old)old.remove()}
+ $('#content').insertAdjacentHTML('beforeend','<div class="grid" id="tg'+trendPage+'">'+cards+'</div>');
+ trendPage++;
+ $('#content').insertAdjacentHTML('beforeend','<button class="more" id="more" onclick="doTrending(true)">More</button>');
+}
 async function doSearch(q){
  $('#content').innerHTML='<div class="spin"></div>';
  var r=await api('../Search?query='+encodeURIComponent(q));
@@ -130,6 +149,7 @@ async function doRecent(){
 api('../Ping').then(function(r){
  $('#dot').className=(r.status===200&&r.text.indexOf('"true"')>-1)?'on':'off';
 }).catch(function(){$('#dot').className='off'});
+doTrending(false);
 </script>
 </body>
 </html>

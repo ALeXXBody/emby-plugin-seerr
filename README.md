@@ -43,11 +43,17 @@ Grab `Emby.Plugin.Seerr.zip` from the [latest release](../../releases/latest) an
 
 ### 2. Copy the DLL into your Emby plugins folder
 
+Emby loads plugins from the **data folder** (`plugins/` subfolder):
+
 | Install type | Path |
 |---|---|
-| Linux native | `/opt/emby-server/plugins/` |
-| Docker | the host path mapped to `/config`, inside its `plugins/` subfolder |
+| Linux native (.deb) | `/var/lib/emby/plugins/` |
+| Docker | `<host path mapped to /config>/plugins/` |
 | Windows | `%AppData%\Emby-Server\plugins\` |
+
+```bash
+sudo chown emby:emby /var/lib/emby/plugins/Emby.Plugin.Seerr.dll
+```
 
 ### 3. Restart Emby Server
 
@@ -57,7 +63,7 @@ sudo systemctl restart emby-server
 
 ### 4. Configure
 
-Dashboard → **Plugins** → **Seerr Requests** → Settings:
+Dashboard → **Plugins** → **Seerr Requests** → **Settings**:
 
 | Setting | Example | Notes |
 |---|---|---|
@@ -72,6 +78,18 @@ it should return `{"ok":true}`.
 
 Open **`http://<emby-host>:8096/emby/Seerr/Ui`**, log in with any Emby account.
 
+The UI opens on a **Trending** wall (no typing needed); use the *Search* tab to look
+up specific titles, *Recent* for request history.
+
+### On TVs
+
+Native Emby TV apps can't host plugin UIs, but the page works in TV browsers:
+
+- **Samsung (Tizen):** open the built-in *Internet* browser → go to
+  `/emby/Seerr/Ui` → save as bookmark. Arrow keys / D-pad move focus; Enter requests.
+- **Android TV / Fire TV:** install [TV Bro](https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser)
+  (free, open source, remote-friendly) and set the Ui URL as its homepage.
+
 ### Phone "app"
 
 1. Log into Emby Web once in the phone browser.
@@ -84,8 +102,9 @@ All require Emby authentication.
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `/emby/Seerr/Ui` | GET | Mobile request UI (HTML) |
+| `/emby/Seerr/Ui` | GET | Mobile/TV request UI (HTML) |
 | `/emby/Seerr/Ping` | GET | Config/connectivity check → `{"ok":true}` |
+| `/emby/Seerr/Discover?page=` | GET | Trending movies & shows |
 | `/emby/Seerr/Search?query=` | GET | Proxy to Seerr search |
 | `/emby/Seerr/Requests?take=&skip=` | GET | Recent requests |
 | `/emby/Seerr/Request` | POST | Create request — body: `{"mediaType":"movie"\|"tv","mediaId":123,"seasons":"1,2"}` (`seasons` optional, TV only) |

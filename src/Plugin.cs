@@ -26,11 +26,21 @@ namespace Emby.Plugin.Seerr
             "Search Seerr (Overseerr/Jellyseerr) and request movies & shows. " +
             "Open /emby/Seerr/Ui in any browser - on phones use 'Add to Home Screen' for an app-like experience.";
 
-        // Dashboard link -> mobile request UI
+        // Dashboard pages: main config page (Settings button) + request UI link
         public IEnumerable<PluginPageInfo> GetPages()
         {
             return new[]
             {
+                new PluginPageInfo
+                {
+                    Name = "seerrconfig",
+                    DisplayName = "Seerr Requests",
+                    EmbeddedResourcePath = "Emby.Plugin.Seerr.Configuration.config.html",
+                    EnableInMainMenu = false,
+                    EnableInUserMenu = false,
+                    MenuSection = "",
+                    IsMainConfigPage = true
+                },
                 new PluginPageInfo
                 {
                     Name = "seerrui",
