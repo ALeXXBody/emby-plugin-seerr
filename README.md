@@ -3,6 +3,7 @@
 [![Build](https://github.com/ALeXXBody/emby-plugin-seerr/actions/workflows/build.yml/badge.svg)](https://github.com/ALeXXBody/emby-plugin-seerr/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/ALeXXBody/emby-plugin-seerr)](../../releases)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/alexxbody)
 
 An [Emby Server](https://emby.media) plugin that integrates [Seerr](https://seerr.dev)
 (Overseerr / Jellyseerr), so you can **search and request movies & TV shows from any
@@ -212,6 +213,10 @@ reference DLLs — see the [Actions tab](../../actions).
 - No per-user attribution in Seerr yet: all requests are created by the API-key owner.
 - Native Emby apps can't embed the UI (use a browser / home-screen shortcut).
 - Unofficial project — not affiliated with Emby or the Seerr team.
+
+## Support
+
+If this plugin is useful to you, you can [buy me a coffee](https://buymeacoffee.com/alexxbody).
 
 ## License
 
