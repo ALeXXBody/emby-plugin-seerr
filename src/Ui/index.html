@@ -135,7 +135,7 @@ function deviceId(){
  }catch(e){return 'seerr-ui-web'}
 }
 function embyAuthHeader(token){
- var h='MediaBrowser Client="Seerr Requests", Device="Mobile Web", DeviceId="'+deviceId()+'", Version="1.4.5"';
+ var h='MediaBrowser Client="Seerr Requests", Device="Mobile Web", DeviceId="'+deviceId()+'", Version="1.4.6"';
  if(token)h+=', Token="'+token+'"';
  return h;
 }

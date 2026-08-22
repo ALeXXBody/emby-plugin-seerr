@@ -207,24 +207,12 @@ namespace Emby.Plugin.Seerr.Api
                 return Json(400, "{\"error\":\"invalid mediaId\"}");
             }
 
+            // Seerr 3.x requires `seasons` for TV ("all" or [1,2,...]). Omitting it returns 500.
             var body = "{\"mediaType\":\"" + mediaType + "\",\"mediaId\":" + request.MediaId;
-
-            if (!string.IsNullOrWhiteSpace(request.Seasons))
+            if (mediaType == "tv")
             {
-                var seasons = request.Seasons
-                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => x.Trim())
-                    .Where(x => x.All(char.IsDigit))
-                    .Select(int.Parse)
-                    .Where(n => n > 0 && n < 200)
-                    .Distinct()
-                    .OrderBy(n => n)
-                    .ToList();
-
-                if (seasons.Count > 0)
-                {
-                    body += ",\"seasons\":[" + string.Join(",", seasons) + "]";
-                }
+                var seasonsJson = BuildSeasonsJson(request.Seasons);
+                body += ",\"seasons\":" + seasonsJson;
             }
             body += "}";
 
@@ -232,6 +220,11 @@ namespace Emby.Plugin.Seerr.Api
             {
                 var r = SeerrClient.PostJsonAsync("/api/v1/request", body)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
+                // Normalize Seerr error shape so UIs can show a useful message.
+                if (r.Status >= 400)
+                {
+                    return Json(r.Status, NormalizeSeerrError(r.Body, r.Status));
+                }
                 return Json(r.Status, r.Body);
             }
             catch (Exception ex)
@@ -263,6 +256,80 @@ namespace Emby.Plugin.Seerr.Api
             }
 
             return Raw(200, "text/html; charset=utf-8", UiPage.Html);
+        }
+
+        /// <summary>
+        /// Build Seerr seasons JSON. Empty/null => "all". "all" => "all". "1,2" => [1,2].
+        /// </summary>
+        private static string BuildSeasonsJson(string seasons)
+        {
+            if (string.IsNullOrWhiteSpace(seasons))
+            {
+                return "\"all\"";
+            }
+
+            var trimmed = seasons.Trim();
+            if (string.Equals(trimmed, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                return "\"all\"";
+            }
+
+            var list = trimmed
+                .Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => x.All(char.IsDigit))
+                .Select(int.Parse)
+                .Where(n => n > 0 && n < 200)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToList();
+
+            if (list.Count == 0)
+            {
+                return "\"all\"";
+            }
+
+            return "[" + string.Join(",", list) + "]";
+        }
+
+        private static string NormalizeSeerrError(string body, int status)
+        {
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return "{\"error\":\"Seerr request failed (" + status + ")\"}";
+            }
+
+            try
+            {
+                // Already has "error"
+                if (body.IndexOf("\"error\"", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return body;
+                }
+                // Seerr uses { "message": "..." }
+                const string key = "\"message\"";
+                var idx = body.IndexOf(key, StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0)
+                {
+                    var colon = body.IndexOf(':', idx + key.Length);
+                    if (colon > 0)
+                    {
+                        var firstQuote = body.IndexOf('"', colon + 1);
+                        if (firstQuote > 0)
+                        {
+                            var secondQuote = body.IndexOf('"', firstQuote + 1);
+                            if (secondQuote > firstQuote)
+                            {
+                                var msg = body.Substring(firstQuote + 1, secondQuote - firstQuote - 1);
+                                return "{\"error\":" + Quote(Sanitize(msg)) + ",\"status\":" + status + "}";
+                            }
+                        }
+                    }
+                }
+            }
+            catch { /* fall through */ }
+
+            return "{\"error\":\"Seerr request failed (" + status + ")\"}";
         }
 
         private static string Quote(string s)
