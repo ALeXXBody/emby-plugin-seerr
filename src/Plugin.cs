@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Emby.Plugin.Seerr.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
 namespace Emby.Plugin.Seerr
 {
-    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
+    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
             : base(applicationPaths, xmlSerializer)
@@ -25,6 +27,14 @@ namespace Emby.Plugin.Seerr
         public override string Description =>
             "Search Seerr (Overseerr/Jellyseerr) and request movies & shows. " +
             "Open /emby/Seerr/Ui in any browser - on phones use 'Add to Home Screen' for an app-like experience.";
+
+        public Stream GetThumbImage()
+        {
+            var type = GetType();
+            return type.Assembly.GetManifestResourceStream(type.Namespace + ".thumb.png");
+        }
+
+        public ImageFormat ThumbImageFormat => ImageFormat.Png;
 
         // Dashboard pages: main config page (Settings button) + request UI link
         public IEnumerable<PluginPageInfo> GetPages()
