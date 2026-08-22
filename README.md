@@ -122,7 +122,8 @@ This is a **native Emby dashboard page** (HTML + BaseView + `ApiClient`). No Hom
 
 ### Standalone page (phones / TV browsers)
 
-Open **`http://<emby-host>:8096/emby/Seerr/Ui`**, log in with any Emby account.
+Open **`http://<emby-host>:8096/emby/Seerr/Ui`**. The page is public and shows an
+**Emby sign-in** form (token is stored in the browser; API calls stay authenticated).
 
 Both UIs open on a **Trending** wall; use *Search* for titles, *Recent* for history.
 Tap/click a poster for **recommendations**.

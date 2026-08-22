@@ -1,3 +1,4 @@
+using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
 
 namespace Emby.Plugin.Seerr.Api
@@ -50,6 +51,8 @@ namespace Emby.Plugin.Seerr.Api
         public string Seasons { get; set; }
     }
 
+    // HTML shell only — page does its own Emby login. API routes stay authenticated.
+    [Unauthenticated]
     [Route("/Seerr/Ui", "GET", Summary = "Mobile friendly request UI")]
     public class GetSeerrUi : IReturnVoid
     {

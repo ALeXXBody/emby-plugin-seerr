@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Requests</title>
 <style>
-:root{--bg:#0f1115;--card:#181b22;--line:#242936;--txt:#e8eaf0;--dim:#9aa1b2;--acc:#7c5cff;--ok:#3fb26f;--warn:#e0a63c;--dl:#4a90d9;--part:#2fa6a0}
+:root{--bg:#0f1115;--card:#181b22;--line:#242936;--txt:#e8eaf0;--dim:#9aa1b2;--acc:#7c5cff;--ok:#3fb26f;--warn:#e0a63c;--dl:#4a90d9;--part:#2fa6a0;--err:#d95c5c}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding-bottom:40px}
 header{position:sticky;top:0;z-index:5;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 16px 10px}
@@ -14,8 +16,8 @@ h1{margin:0;font-size:20px;font-weight:700;display:flex;align-items:center;gap:8
 #dot{width:9px;height:9px;border-radius:50%;background:#666;flex:none}
 #dot.on{background:var(--ok)} #dot.off{background:#d95c5c}
 .searchbar{display:flex;gap:8px;margin-top:10px}
-input[type=search]{flex:1;background:var(--card);border:1px solid var(--line);color:var(--txt);padding:11px 14px;border-radius:10px;font-size:16px;outline:none}
-input[type=search]:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(124,92,255,.35)}
+input[type=search],input[type=text],input[type=password]{flex:1;width:100%;background:var(--card);border:1px solid var(--line);color:var(--txt);padding:11px 14px;border-radius:10px;font-size:16px;outline:none}
+input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(124,92,255,.35)}
 .tabs{display:flex;gap:6px;margin-top:10px}
 .tab{background:none;border:1px solid var(--line);color:var(--dim);padding:7px 14px;border-radius:99px;font-size:13px;cursor:pointer}
 .tab.on{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -30,8 +32,9 @@ main{max-width:900px;margin:0 auto;padding:12px}
 .meta{padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;flex:1}
 .t{font-size:13px;font-weight:600;line-height:1.25;max-height:32px;overflow:hidden}
 .y{font-size:11px;color:var(--dim)}
-button.req{margin-top:auto;width:100%;border:0;border-radius:8px;padding:9px 0;font-size:13px;font-weight:700;color:#fff;background:var(--acc);cursor:pointer}
-button.req:disabled{opacity:.55;cursor:default}
+button.req,button.primary{margin-top:auto;width:100%;border:0;border-radius:8px;padding:11px 0;font-size:14px;font-weight:700;color:#fff;background:var(--acc);cursor:pointer}
+button.req:disabled,button.primary:disabled{opacity:.55;cursor:default}
+button.ghost{background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer}
 .badge{align-self:flex-start;font-size:10px;font-weight:800;letter-spacing:.4px;padding:3px 8px;border-radius:99px;text-transform:uppercase}
 .b-req{background:var(--warn);color:#231a05}
 .b-proc{background:var(--dl);color:#fff}
@@ -50,14 +53,45 @@ button.req:disabled{opacity:.55;cursor:default}
 .mhead h2{margin:0;font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .x{background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer;flex:none}
 .sub{color:var(--dim);font-size:12px;margin:4px 0 14px}
-/* D-pad / keyboard focus visibility (TV browsers) */
-.tab:focus,.req:focus,.more:focus,.x:focus,.card.click:focus{outline:3px solid var(--acc);outline-offset:2px}
+#app{display:none}
+#login{max-width:400px;margin:48px auto;padding:0 16px}
+#login .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 18px}
+#login h2{margin:0 0 6px;font-size:20px}
+#login p{margin:0 0 16px;color:var(--dim);font-size:13px;line-height:1.45}
+#login label{display:block;font-size:12px;color:var(--dim);margin:0 0 6px}
+#login .field{margin-bottom:12px}
+#loginErr{color:var(--err);font-size:13px;min-height:18px;margin:8px 0 0}
+#who{margin-left:auto;font-size:12px;color:var(--dim);font-weight:500}
+.hdr-row{display:flex;align-items:center;gap:8px}
+.tab:focus,.req:focus,.more:focus,.x:focus,.card.click:focus,button.primary:focus,button.ghost:focus{outline:3px solid var(--acc);outline-offset:2px}
 .req:focus{transform:scale(1.04)}
 </style>
 </head>
 <body>
+<div id="login">
+  <div class="box">
+    <h2>Requests</h2>
+    <p>Sign in with your Emby account to search and request titles.</p>
+    <div class="field">
+      <label for="user">Username</label>
+      <input id="user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password">
+    </div>
+    <button class="primary" id="btnLogin" type="button">Sign in</button>
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<div id="app">
 <header>
-  <h1><span id="dot"></span>Requests</h1>
+  <div class="hdr-row">
+    <h1><span id="dot"></span>Requests</h1>
+    <span id="who"></span>
+    <button class="ghost" id="btnLogout" type="button">Sign out</button>
+  </div>
   <div class="searchbar">
     <input id="q" type="search" placeholder="Search movies &amp; shows..." autocomplete="off">
   </div>
@@ -68,6 +102,7 @@ button.req:disabled{opacity:.55;cursor:default}
   </div>
 </header>
 <main id="content"><p class="hint">Loading trending...</p></main>
+</div>
 
 <div class="modal" id="modal">
   <div class="sheet">
@@ -82,12 +117,54 @@ button.req:disabled{opacity:.55;cursor:default}
 var $=function(s){return document.querySelector(s)};
 var tmdb='https://image.tmdb.org/t/p/w200';
 var trendPage=1;
+var TOKEN_KEY='seerr_emby_token';
+var USER_KEY='seerr_emby_user';
+var DEVICE_ID_KEY='seerr_emby_device';
+
 function qs(name){
  var m=new URLSearchParams(location.search||'').get(name);
  return m||'';
 }
+function deviceId(){
+ try{
+  var id=localStorage.getItem(DEVICE_ID_KEY);
+  if(id)return id;
+  id='seerr-ui-'+Math.random().toString(36).slice(2)+Date.now().toString(36);
+  localStorage.setItem(DEVICE_ID_KEY,id);
+  return id;
+ }catch(e){return 'seerr-ui-web'}
+}
+function embyAuthHeader(){
+ return 'MediaBrowser Client="Seerr Requests", Device="Mobile Web", DeviceId="'+deviceId()+'", Version="1.4.4"';
+}
+function readStoredToken(){
+ try{
+  return sessionStorage.getItem(TOKEN_KEY)||localStorage.getItem(TOKEN_KEY)||'';
+ }catch(e){return ''}
+}
+function readStoredUser(){
+ try{
+  return sessionStorage.getItem(USER_KEY)||localStorage.getItem(USER_KEY)||'';
+ }catch(e){return ''}
+}
+function saveSession(token,userName,remember){
+ try{
+  var store=remember?localStorage:sessionStorage;
+  var other=remember?sessionStorage:localStorage;
+  store.setItem(TOKEN_KEY,token);
+  if(userName)store.setItem(USER_KEY,userName);
+  other.removeItem(TOKEN_KEY);
+  other.removeItem(USER_KEY);
+ }catch(e){}
+}
+function clearSession(){
+ try{
+  sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(USER_KEY);
+  localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(USER_KEY);
+ }catch(e){}
+}
 function authToken(){
- return qs('api_key')||qs('ApiKey')||qs('X-Emby-Token')||'';
+ return qs('api_key')||qs('ApiKey')||qs('X-Emby-Token')||readStoredToken()||'';
 }
 function apiUrl(path){
  var p=String(path||'');
@@ -106,7 +183,12 @@ async function api(path,opt){
  opt.headers=opt.headers||{};
  var t=authToken();
  if(t&&!opt.headers['X-Emby-Token'])opt.headers['X-Emby-Token']=t;
+ if(!opt.headers['X-Emby-Authorization'])opt.headers['X-Emby-Authorization']=embyAuthHeader()+(t?', Token="'+t+'"':'');
  var r=await fetch(apiUrl(path),opt);
+ if(r.status===401){
+  clearSession();
+  showLogin('Session expired — sign in again.');
+ }
  return{status:r.status,text:await r.text()}
 }
 function jparse(o){try{return JSON.parse(o.text)}catch(e){return null}}
@@ -209,11 +291,85 @@ async function doRecent(){
  }).join('');
  $('#content').innerHTML='<div class="grid rowlist">'+rows+'</div>';
 }
-api('Ping').then(function(r){
- var ok=r.status===200&&(r.text.indexOf('"ok":true')>-1||r.text.indexOf('"ok": true')>-1||r.text.indexOf('true')>-1);
- $('#dot').className=ok?'on':'off';
-}).catch(function(){$('#dot').className='off'});
-doTrending(false);
+
+function showLogin(msg){
+ $('#login').style.display='block';
+ $('#app').style.display='none';
+ $('#loginErr').textContent=msg||'';
+}
+function showApp(userName){
+ $('#login').style.display='none';
+ $('#app').style.display='block';
+ $('#who').textContent=userName||'';
+ api('Ping').then(function(r){
+  var ok=r.status===200&&(r.text.indexOf('"ok":true')>-1||r.text.indexOf('"ok": true')>-1);
+  $('#dot').className=ok?'on':'off';
+ }).catch(function(){$('#dot').className='off'});
+ doTrending(false);
+}
+async function tryExistingSession(){
+ var t=authToken();
+ if(!t){showLogin();return}
+ // validate token
+ try{
+  var r=await fetch('/emby/Users/Me',{
+   headers:{
+    'X-Emby-Token':t,
+    'X-Emby-Authorization':embyAuthHeader()+', Token="'+t+'"'
+   }
+  });
+  if(r.status===200){
+   var u=await r.json();
+   var name=u.Name||readStoredUser()||'';
+   if(name)saveSession(t,name,!!localStorage.getItem(TOKEN_KEY)||!!qs('api_key'));
+   showApp(name);
+   return;
+  }
+ }catch(e){}
+ clearSession();
+ showLogin(qs('api_key')?'Access token is invalid or expired.':'');
+}
+async function doLogin(){
+ var user=($('#user').value||'').trim();
+ var pw=$('#pw').value||'';
+ var err=$('#loginErr');
+ err.textContent='';
+ if(!user){err.textContent='Enter your Emby username.';return}
+ var btn=$('#btnLogin');
+ btn.disabled=true;btn.textContent='Signing in...';
+ try{
+  var r=await fetch('/emby/Users/authenticatebyname',{
+   method:'POST',
+   headers:{
+    'Content-Type':'application/json',
+    'X-Emby-Authorization':embyAuthHeader()
+   },
+   body:JSON.stringify({Username:user,Pw:pw})
+  });
+  var text=await r.text();
+  var data=null;try{data=JSON.parse(text)}catch(e){}
+  if(r.status!==200||!data||!data.AccessToken){
+   err.textContent=(data&&(data.Message||data.message))||('Sign in failed ('+r.status+').');
+   return;
+  }
+  var name=(data.User&&data.User.Name)||user;
+  saveSession(data.AccessToken,name,true);
+  $('#pw').value='';
+  showApp(name);
+ }catch(e){
+  err.textContent='Could not reach Emby. Check the address and try again.';
+ }finally{
+  btn.disabled=false;btn.textContent='Sign in';
+ }
+}
+$('#btnLogin').addEventListener('click',doLogin);
+$('#pw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin()});
+$('#user').addEventListener('keydown',function(e){if(e.key==='Enter')$('#pw').focus()});
+$('#btnLogout').addEventListener('click',function(){
+ clearSession();
+ showLogin('Signed out.');
+});
+tryExistingSession();
 </script>
 </body>
 </html>
