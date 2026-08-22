@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0f1115">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="referrer" content="no-referrer">
 <title>Requests</title>
 <style>
 :root{--bg:#0f1115;--card:#181b22;--line:#242936;--txt:#e8eaf0;--dim:#9aa1b2;--acc:#7c5cff;--ok:#3fb26f;--warn:#e0a63c;--dl:#4a90d9;--part:#2fa6a0;--err:#d95c5c}
@@ -60,6 +61,7 @@ button.ghost{background:none;border:1px solid var(--line);color:var(--dim);borde
 #login p{margin:0 0 16px;color:var(--dim);font-size:13px;line-height:1.45}
 #login label{display:block;font-size:12px;color:var(--dim);margin:0 0 6px}
 #login .field{margin-bottom:12px}
+#login .row{display:flex;align-items:center;gap:8px;margin:4px 0 12px;font-size:13px;color:var(--dim)}
 #loginErr{color:var(--err);font-size:13px;min-height:18px;margin:8px 0 0}
 #who{margin-left:auto;font-size:12px;color:var(--dim);font-weight:500}
 .hdr-row{display:flex;align-items:center;gap:8px}
@@ -80,6 +82,7 @@ button.ghost{background:none;border:1px solid var(--line);color:var(--dim);borde
       <label for="pw">Password</label>
       <input id="pw" type="password" autocomplete="current-password">
     </div>
+    <label class="row"><input id="remember" type="checkbox"> Remember me on this device</label>
     <button class="primary" id="btnLogin" type="button">Sign in</button>
     <div id="loginErr"></div>
   </div>
@@ -96,9 +99,9 @@ button.ghost{background:none;border:1px solid var(--line);color:var(--dim);borde
     <input id="q" type="search" placeholder="Search movies &amp; shows..." autocomplete="off">
   </div>
   <div class="tabs">
-    <button class="tab on" data-tab="trending">Trending</button>
-    <button class="tab" data-tab="search">Search</button>
-    <button class="tab" data-tab="mine">Recent</button>
+    <button class="tab on" data-tab="trending" type="button">Trending</button>
+    <button class="tab" data-tab="search" type="button">Search</button>
+    <button class="tab" data-tab="mine" type="button">Recent</button>
   </div>
 </header>
 <main id="content"><p class="hint">Loading trending...</p></main>
@@ -106,7 +109,7 @@ button.ghost{background:none;border:1px solid var(--line);color:var(--dim);borde
 
 <div class="modal" id="modal">
   <div class="sheet">
-    <div class="mhead"><h2 id="mtitle"></h2><button class="x" onclick="closeModal()">Close</button></div>
+    <div class="mhead"><h2 id="mtitle"></h2><button class="x" id="btnCloseModal" type="button">Close</button></div>
     <p class="sub" id="msub"></p>
     <div id="mbody"></div>
   </div>
@@ -115,16 +118,13 @@ button.ghost{background:none;border:1px solid var(--line);color:var(--dim);borde
 <div class="toast" id="toast"></div>
 <script>
 var $=function(s){return document.querySelector(s)};
-var tmdb='https://image.tmdb.org/t/p/w200';
+var TMDB='https://image.tmdb.org/t/p/w200';
 var trendPage=1;
 var TOKEN_KEY='seerr_emby_token';
 var USER_KEY='seerr_emby_user';
 var DEVICE_ID_KEY='seerr_emby_device';
+var REMEMBER_KEY='seerr_emby_remember';
 
-function qs(name){
- var m=new URLSearchParams(location.search||'').get(name);
- return m||'';
-}
 function deviceId(){
  try{
   var id=localStorage.getItem(DEVICE_ID_KEY);
@@ -134,8 +134,16 @@ function deviceId(){
   return id;
  }catch(e){return 'seerr-ui-web'}
 }
-function embyAuthHeader(){
- return 'MediaBrowser Client="Seerr Requests", Device="Mobile Web", DeviceId="'+deviceId()+'", Version="1.4.4"';
+function embyAuthHeader(token){
+ var h='MediaBrowser Client="Seerr Requests", Device="Mobile Web", DeviceId="'+deviceId()+'", Version="1.4.5"';
+ if(token)h+=', Token="'+token+'"';
+ return h;
+}
+function rememberPreferred(){
+ try{return localStorage.getItem(REMEMBER_KEY)==='1'}catch(e){return false}
+}
+function setRememberPreferred(on){
+ try{if(on)localStorage.setItem(REMEMBER_KEY,'1');else localStorage.removeItem(REMEMBER_KEY)}catch(e){}
 }
 function readStoredToken(){
  try{
@@ -149,6 +157,7 @@ function readStoredUser(){
 }
 function saveSession(token,userName,remember){
  try{
+  setRememberPreferred(!!remember);
   var store=remember?localStorage:sessionStorage;
   var other=remember?sessionStorage:localStorage;
   store.setItem(TOKEN_KEY,token);
@@ -163,36 +172,63 @@ function clearSession(){
   localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(USER_KEY);
  }catch(e){}
 }
-function authToken(){
- return qs('api_key')||qs('ApiKey')||qs('X-Emby-Token')||readStoredToken()||'';
-}
+// Headers only — never put tokens in the URL (history/logs/Referer).
+function authToken(){return readStoredToken()||''}
 function apiUrl(path){
  var p=String(path||'');
  if(p.indexOf('http')===0)return p;
  p=p.replace(/^\.\.\//,'').replace(/^\/+/,'');
  if(p.indexOf('emby/')!==0)p='emby/Seerr/'+p;
- p='/'+p;
- var t=authToken();
- if(!t)return p;
- return p+(p.indexOf('?')>=0?'&':'?')+'api_key='+encodeURIComponent(t);
+ return '/'+p;
 }
 function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2600)}
 async function api(path,opt){
  opt=opt||{};
- opt.credentials=opt.credentials||'include';
+ opt.credentials='same-origin';
  opt.headers=opt.headers||{};
  var t=authToken();
- if(t&&!opt.headers['X-Emby-Token'])opt.headers['X-Emby-Token']=t;
- if(!opt.headers['X-Emby-Authorization'])opt.headers['X-Emby-Authorization']=embyAuthHeader()+(t?', Token="'+t+'"':'');
+ if(t){
+  if(!opt.headers['X-Emby-Token'])opt.headers['X-Emby-Token']=t;
+  if(!opt.headers['X-Emby-Authorization'])opt.headers['X-Emby-Authorization']=embyAuthHeader(t);
+ }else if(!opt.headers['X-Emby-Authorization']){
+  opt.headers['X-Emby-Authorization']=embyAuthHeader('');
+ }
  var r=await fetch(apiUrl(path),opt);
  if(r.status===401){
   clearSession();
   showLogin('Session expired — sign in again.');
  }
+ if(r.status===403){
+  var body=await r.text();
+  var e=null;try{e=JSON.parse(body)}catch(x){}
+  toast((e&&e.error)||'Not allowed');
+  return{status:r.status,text:body};
+ }
+ if(r.status===429){
+  var b=await r.text();
+  var j=null;try{j=JSON.parse(b)}catch(x){}
+  toast((j&&j.error)||'Too many requests — slow down');
+  return{status:r.status,text:b};
+ }
  return{status:r.status,text:await r.text()}
 }
 function jparse(o){try{return JSON.parse(o.text)}catch(e){return null}}
-function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function safeMediaType(mt){
+ mt=String(mt||'').toLowerCase();
+ return (mt==='movie'||mt==='tv')?mt:'';
+}
+function safePosterUrl(path){
+ if(!path||typeof path!=='string')return'';
+ // TMDB paths look like /abc.jpg — reject anything else (XSS via src=).
+ if(!/^\/[A-Za-z0-9_./-]+$/.test(path))return'';
+ if(path.indexOf('..')>=0)return'';
+ return TMDB+path;
+}
+function safeTmdbId(id){
+ var n=parseInt(id,10);
+ return (n>0&&n<1e12)?n:0;
+}
 function badgeFor(st){
  if(st===5)return'<span class="badge b-ok">Available</span>';
  if(st===4)return'<span class="badge b-part">Partial</span>';
@@ -201,41 +237,61 @@ function badgeFor(st){
  return'';
 }
 function card(item){
- var mt=item.mediaType;
- if(mt==='person'||mt==='network')return'';
+ var mt=safeMediaType(item.mediaType);
+ if(!mt)return'';
  var title=mt==='movie'?item.title:(item.name||item.title);
  var year=(mt==='movie'?item.releaseDate:(item.firstAirDate||''))||'';
  year=year?String(year).slice(0,4):'';
+ if(year&&!/^\d{4}$/.test(year))year='';
  var st=item.mediaInfo?item.mediaInfo.status:0;
- var poster=item.posterPath?tmdb+item.posterPath:'';
- var tid=item.tmdbId||item.id||0;
- var btn=(st>=2&&st<=5)?'':('<button class="req" onclick="event.stopPropagation();request(this,\''+mt+'\','+tid+')">Request</button>');
- return '<div class="card click" tabindex="0" data-mt="'+mt+'" data-tid="'+tid+'" data-title="'+esc(title)+'" onclick="openRecs(this)">'+
-   '<div class="poster">'+(poster?'<img loading="lazy" src="'+poster+'">':'<div class="noposter">&#127916;</div>')+'</div>'+
-   '<div class="meta"><span class="t">'+esc(title)+'</span><span class="y">'+year+'</span>'+badgeFor(st)+btn+'</div></div>';
+ var poster=safePosterUrl(item.posterPath);
+ var tid=safeTmdbId(item.tmdbId||item.id||0);
+ var btn=(st>=2&&st<=5)||!tid?'':'<button type="button" class="req" data-act="request" data-mt="'+mt+'" data-id="'+tid+'">Request</button>';
+ return '<div class="card click" tabindex="0" data-act="recs" data-mt="'+mt+'" data-tid="'+tid+'" data-title="'+esc(title)+'">'+
+   '<div class="poster">'+(poster?'<img loading="lazy" alt="" src="'+esc(poster)+'">':'<div class="noposter">&#127916;</div>')+'</div>'+
+   '<div class="meta"><span class="t">'+esc(title)+'</span><span class="y">'+esc(year)+'</span>'+badgeFor(st)+btn+'</div></div>';
 }
-window.request=function(btn,mt,id){
- if(!id)return;
+function onGridClick(e){
+ var req=e.target.closest('[data-act="request"]');
+ if(req){
+  e.preventDefault();e.stopPropagation();
+  doRequest(req,req.getAttribute('data-mt'),parseInt(req.getAttribute('data-id'),10));
+  return;
+ }
+ var cardEl=e.target.closest('[data-act="recs"]');
+ if(cardEl)openRecs(cardEl);
+}
+$('#content').addEventListener('click',onGridClick);
+$('#mbody').addEventListener('click',onGridClick);
+function doRequest(btn,mt,id){
+ mt=safeMediaType(mt);id=safeTmdbId(id);
+ if(!mt||!id)return;
  btn.disabled=true;btn.textContent='Sending...';
  api('Request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mediaType:mt,mediaId:id})})
- .then(function(r){if(r.status<300){btn.outerHTML='<span class="badge b-req">Pending</span>';toast('Request sent to Seerr')}else{btn.disabled=false;btn.textContent='Retry';var e=jparse(r);toast((e&&e.error)?('Error: '+e.error):('Failed ('+r.status+')'))}});
-};
-window.openRecs=function(el){
- var mt=el.getAttribute('data-mt'),tid=el.getAttribute('data-tid'),title=el.getAttribute('data-title');
- if(!tid||tid==='0')return;
+ .then(function(r){
+  if(r.status<300){btn.outerHTML='<span class="badge b-req">Pending</span>';toast('Request sent to Seerr')}
+  else{btn.disabled=false;btn.textContent='Retry';var e=jparse(r);toast((e&&e.error)?('Error: '+e.error):('Failed ('+r.status+')'))}
+ });
+}
+function openRecs(el){
+ var mt=safeMediaType(el.getAttribute('data-mt'));
+ var tid=safeTmdbId(el.getAttribute('data-tid'));
+ var title=el.getAttribute('data-title')||'';
+ if(!mt||!tid)return;
  openModal();
  $('#mtitle').textContent=title;
  $('#msub').textContent='Recommended because of '+title;
  $('#mbody').innerHTML='<div class="spin"></div>';
- api('Recommended?mediaType='+mt+'&tmdbId='+tid).then(function(r){
+ api('Recommended?mediaType='+encodeURIComponent(mt)+'&tmdbId='+tid).then(function(r){
   var d=jparse(r);
   if(r.status!==200||!d||!d.results){$('#mbody').innerHTML='<p class="hint">No recommendations found.</p>';return}
   var cards=d.results.map(card).join('');
   $('#mbody').innerHTML=cards?'<div class="grid">'+cards+'</div>':'<p class="hint">No recommendations for this title yet.</p>';
  });
-};
+}
 function openModal(){$('#modal').classList.add('open')}
-window.closeModal=function(){$('#modal').classList.remove('open');$('#mbody').innerHTML=''};
+function closeModal(){$('#modal').classList.remove('open');$('#mbody').innerHTML=''}
+$('#btnCloseModal').addEventListener('click',closeModal);
 $('#modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal()});
 var timer=null,lastQ='';
@@ -258,13 +314,18 @@ async function doTrending(append){
  if(!append){$('#content').innerHTML='<div class="spin"></div>';trendPage=1}
  var r=await api('Discover?page='+trendPage);
  var d=jparse(r);
+ if(r.status===403){$('#content').innerHTML='<p class="hint">Your account is not allowed to use Requests.</p>';return}
  if(r.status!==200||!d||!d.results){if(!append)$('#content').innerHTML='<p class="hint">Could not load trending ('+r.status+'). Is the plugin configured?</p>';return}
  var cards=d.results.map(card).join('');
  if(!cards&&!append){$('#content').innerHTML='<p class="hint">Nothing trending right now.</p>';return}
  if(append){var old=$('#more');if(old)old.remove()}
+ else $('#content').innerHTML='';
  $('#content').insertAdjacentHTML('beforeend','<div class="grid" id="tg'+trendPage+'">'+cards+'</div>');
  trendPage++;
- $('#content').insertAdjacentHTML('beforeend','<button class="more" id="more" onclick="doTrending(true)">More</button>');
+ var more=document.createElement('button');
+ more.className='more';more.id='more';more.type='button';more.textContent='More';
+ more.addEventListener('click',function(){doTrending(true)});
+ $('#content').appendChild(more);
 }
 async function doSearch(q){
  $('#content').innerHTML='<div class="spin"></div>';
@@ -283,10 +344,10 @@ async function doRecent(){
  var rows=d.results.map(function(req){
   var m=req.media||{};
   var title=req.is4k?(m.title4k||m.title):(m.title||m.name);
-  var poster=(req.is4k?(m.posterPath4k||m.posterPath):m.posterPath)||'';
+  var poster=safePosterUrl((req.is4k?(m.posterPath4k||m.posterPath):m.posterPath)||'');
   var who=req.requestedBy&&req.requestedBy.displayName?('<span class="y">by '+esc(req.requestedBy.displayName)+'</span>'):'';
   var st=req.status===1?2:(req.status===2?3:req.status===3?5:2);
-  return '<div class="card"><div class="poster">'+(poster?'<img src="'+tmdb+poster+'">':'<div class="noposter">&#127916;</div>')+'</div>'+
+  return '<div class="card"><div class="poster">'+(poster?'<img alt="" src="'+esc(poster)+'">':'<div class="noposter">&#127916;</div>')+'</div>'+
     '<div class="meta"><span class="t">'+esc(title)+'</span>'+who+badgeFor(st)+'</div></div>';
  }).join('');
  $('#content').innerHTML='<div class="grid rowlist">'+rows+'</div>';
@@ -296,6 +357,7 @@ function showLogin(msg){
  $('#login').style.display='block';
  $('#app').style.display='none';
  $('#loginErr').textContent=msg||'';
+ try{$('#remember').checked=rememberPreferred()}catch(e){}
 }
 function showApp(userName){
  $('#login').style.display='none';
@@ -304,34 +366,50 @@ function showApp(userName){
  api('Ping').then(function(r){
   var ok=r.status===200&&(r.text.indexOf('"ok":true')>-1||r.text.indexOf('"ok": true')>-1);
   $('#dot').className=ok?'on':'off';
+  if(r.status===403)$('#content').innerHTML='<p class="hint">Your account is not allowed to use Requests.</p>';
  }).catch(function(){$('#dot').className='off'});
  doTrending(false);
 }
 async function tryExistingSession(){
+ // One-time migrate: if old bookmarks put api_key in the URL, adopt then strip it.
+ try{
+  var params=new URLSearchParams(location.search||'');
+  var qTok=params.get('api_key')||params.get('ApiKey')||params.get('X-Emby-Token')||'';
+  if(qTok){
+   saveSession(qTok,'',rememberPreferred());
+   if(history.replaceState){
+    params.delete('api_key');params.delete('ApiKey');params.delete('X-Emby-Token');
+    var q=params.toString();
+    history.replaceState(null,'',location.pathname+(q?('?'+q):'')+location.hash);
+   }
+  }
+ }catch(e){}
+
  var t=authToken();
  if(!t){showLogin();return}
- // validate token
  try{
   var r=await fetch('/emby/Users/Me',{
+   credentials:'same-origin',
    headers:{
     'X-Emby-Token':t,
-    'X-Emby-Authorization':embyAuthHeader()+', Token="'+t+'"'
+    'X-Emby-Authorization':embyAuthHeader(t)
    }
   });
   if(r.status===200){
    var u=await r.json();
    var name=u.Name||readStoredUser()||'';
-   if(name)saveSession(t,name,!!localStorage.getItem(TOKEN_KEY)||!!qs('api_key'));
+   if(name)saveSession(t,name,rememberPreferred()||!!localStorage.getItem(TOKEN_KEY));
    showApp(name);
    return;
   }
  }catch(e){}
  clearSession();
- showLogin(qs('api_key')?'Access token is invalid or expired.':'');
+ showLogin('');
 }
 async function doLogin(){
  var user=($('#user').value||'').trim();
  var pw=$('#pw').value||'';
+ var remember=!!$('#remember').checked;
  var err=$('#loginErr');
  err.textContent='';
  if(!user){err.textContent='Enter your Emby username.';return}
@@ -340,9 +418,10 @@ async function doLogin(){
  try{
   var r=await fetch('/emby/Users/authenticatebyname',{
    method:'POST',
+   credentials:'same-origin',
    headers:{
     'Content-Type':'application/json',
-    'X-Emby-Authorization':embyAuthHeader()
+    'X-Emby-Authorization':embyAuthHeader('')
    },
    body:JSON.stringify({Username:user,Pw:pw})
   });
@@ -353,7 +432,7 @@ async function doLogin(){
    return;
   }
   var name=(data.User&&data.User.Name)||user;
-  saveSession(data.AccessToken,name,true);
+  saveSession(data.AccessToken,name,remember);
   $('#pw').value='';
   showApp(name);
  }catch(e){

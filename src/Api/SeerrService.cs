@@ -1,11 +1,8 @@
 using System;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
-using System.Collections.Generic;
 using Emby.Plugin.Seerr.Seerr;
 using Emby.Plugin.Seerr.Ui;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
 
@@ -13,6 +10,13 @@ namespace Emby.Plugin.Seerr.Api
 {
     public class SeerrService : IService, IRequiresRequest, IHasResultFactory
     {
+        private readonly IAuthorizationContext _auth;
+
+        public SeerrService(IAuthorizationContext auth)
+        {
+            _auth = auth;
+        }
+
         public IRequest Request { get; set; }
         public IHttpResultFactory ResultFactory { get; set; }
 
@@ -30,20 +34,49 @@ namespace Emby.Plugin.Seerr.Api
         {
             if (Request != null && Request.Response != null)
             {
-                try { Request.Response.StatusCode = status; } catch { }
-                try { Request.Response.ContentType = contentType; } catch { }
+                try { Request.Response.StatusCode = status; } catch { /* ignore */ }
+                try { Request.Response.ContentType = contentType; } catch { /* ignore */ }
             }
             return body;
         }
 
         private object Json(int status, string body)
         {
-            return Raw(status, "application/json", body);
+            return Raw(status, "application/json; charset=utf-8", body);
+        }
+
+        private object Forbidden(string msg)
+        {
+            return Json(403, "{\"error\":\"" + (msg ?? "forbidden").Replace("\"", "'") + "\"}");
+        }
+
+        /// <summary>
+        /// Require authenticated Emby user and optional AllowedUsers allow-list.
+        /// Returns null when allowed; otherwise an error response object.
+        /// </summary>
+        private object RequireAllowedUser(out User user)
+        {
+            user = AccessControl.GetUser(_auth, Request);
+            if (user == null)
+            {
+                return Json(401, "{\"error\":\"authentication required\"}");
+            }
+
+            if (!AccessControl.IsUserAllowed(user))
+            {
+                return Forbidden("user is not allowed to use Seerr Requests");
+            }
+
+            return null;
         }
 
         // GET /Seerr/Ping
         public object Get(GetSeerrPing request)
         {
+            User user;
+            var denied = RequireAllowedUser(out user);
+            if (denied != null) return denied;
+
             try
             {
                 var r = SeerrClient.GetAsync("/api/v1/status").ConfigureAwait(false).GetAwaiter().GetResult();
@@ -60,6 +93,10 @@ namespace Emby.Plugin.Seerr.Api
         // GET /Seerr/Search?query=
         public object Get(GetSeerrSearch request)
         {
+            User user;
+            var denied = RequireAllowedUser(out user);
+            if (denied != null) return denied;
+
             var query = request.Query;
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -81,6 +118,10 @@ namespace Emby.Plugin.Seerr.Api
         // GET /Seerr/Discover?page=
         public object Get(GetSeerrDiscover request)
         {
+            User user;
+            var denied = RequireAllowedUser(out user);
+            if (denied != null) return denied;
+
             var page = request.Page < 1 ? 1 : (request.Page > 500 ? 500 : request.Page);
             try
             {
@@ -97,6 +138,10 @@ namespace Emby.Plugin.Seerr.Api
         // GET /Seerr/Recommended?mediaType=&tmdbId=
         public object Get(GetSeerrRecommended request)
         {
+            User user;
+            var denied = RequireAllowedUser(out user);
+            if (denied != null) return denied;
+
             var mediaType = (request.MediaType ?? "").Trim().ToLowerInvariant();
             if (mediaType != "movie" && mediaType != "tv")
             {
@@ -121,6 +166,10 @@ namespace Emby.Plugin.Seerr.Api
         // GET /Seerr/Requests?take=&skip=
         public object Get(GetSeerrRequests request)
         {
+            User user;
+            var denied = RequireAllowedUser(out user);
+            if (denied != null) return denied;
+
             var take = request.Take < 1 ? 12 : (request.Take > 100 ? 100 : request.Take);
             var skip = request.Skip < 0 ? 0 : request.Skip;
             try
@@ -138,6 +187,16 @@ namespace Emby.Plugin.Seerr.Api
         // POST /Seerr/Request
         public object Post(CreateSeerrRequest request)
         {
+            User user;
+            var denied = RequireAllowedUser(out user);
+            if (denied != null) return denied;
+
+            string rateErr;
+            if (!AccessControl.TryConsumeRequestQuota(user, out rateErr))
+            {
+                return Json(429, "{\"error\":\"" + rateErr.Replace("\"", "'") + "\"}");
+            }
+
             var mediaType = (request.MediaType ?? "").Trim().ToLowerInvariant();
             if (mediaType != "movie" && mediaType != "tv")
             {
@@ -181,9 +240,28 @@ namespace Emby.Plugin.Seerr.Api
             }
         }
 
-        // GET /Seerr/Ui
+        // GET /Seerr/Ui  (public HTML shell — login is client-side)
         public object Get(GetSeerrUi request)
         {
+            if (Request != null && Request.Response != null)
+            {
+                try
+                {
+                    var headers = Request.Response.Headers;
+                    // Best-effort hardening; Emby may merge/override.
+                    headers["X-Content-Type-Options"] = "nosniff";
+                    headers["X-Frame-Options"] = "SAMEORIGIN";
+                    headers["Referrer-Policy"] = "no-referrer";
+                    headers["Content-Security-Policy"] =
+                        "default-src 'none'; base-uri 'none'; frame-ancestors 'self'; " +
+                        "img-src 'self' https://image.tmdb.org data:; " +
+                        "style-src 'unsafe-inline'; script-src 'unsafe-inline'; " +
+                        "connect-src 'self'; form-action 'self'";
+                    headers["Cache-Control"] = "no-store";
+                }
+                catch { /* ignore header failures */ }
+            }
+
             return Raw(200, "text/html; charset=utf-8", UiPage.Html);
         }
 

@@ -209,6 +209,15 @@ reference DLLs — see the [Actions tab](../../actions).
 | Search works, requests fail | Seerr must have Radarr/Sonarr configured and the API-key owner needs permission to request |
 | Plugin missing after restart | DLL not in the right `plugins/` folder, or wrong architecture-independent build — re-download the release zip |
 
+## Security notes
+
+- All `/emby/Seerr/*` APIs (except the HTML shell at `/Seerr/Ui`) require a valid Emby login.
+- Optional **Allowed users** is enforced server-side (comma-separated Emby names).
+- `POST /Seerr/Request` is rate-limited (~20/min per Emby user).
+- Seerr URL is validated (http/https only; loopback, link-local, and cloud-metadata hosts blocked; redirects disabled).
+- Standalone UI stores the Emby token in `sessionStorage` by default (optional “Remember me” → `localStorage`). Tokens are sent in headers only, never in the URL.
+- **Shared Seerr identity:** requests still appear as the Seerr API-key owner. Use a least-privilege Seerr key.
+
 ## Limitations
 
 - No per-user attribution in Seerr yet: all requests are created by the API-key owner.

@@ -55,23 +55,41 @@ define([
         return '';
     }
 
+    function safeMediaType(mt) {
+        mt = String(mt || '').toLowerCase();
+        return (mt === 'movie' || mt === 'tv') ? mt : '';
+    }
+
+    function safePosterUrl(path) {
+        if (!path || typeof path !== 'string') return '';
+        if (!/^\/[A-Za-z0-9_./-]+$/.test(path)) return '';
+        if (path.indexOf('..') >= 0) return '';
+        return TMDB + path;
+    }
+
+    function safeTmdbId(id) {
+        var n = parseInt(id, 10);
+        return (n > 0 && n < 1e12) ? n : 0;
+    }
+
     function cardHtml(item) {
-        var mt = item.mediaType;
-        if (mt === 'person' || mt === 'network') return '';
+        var mt = safeMediaType(item.mediaType);
+        if (!mt) return '';
         var title = mt === 'movie' ? item.title : (item.name || item.title);
         var year = (mt === 'movie' ? item.releaseDate : (item.firstAirDate || '')) || '';
         year = year ? String(year).slice(0, 4) : '';
+        if (year && !/^\d{4}$/.test(year)) year = '';
         var st = item.mediaInfo ? item.mediaInfo.status : 0;
-        var poster = item.posterPath ? TMDB + item.posterPath : '';
-        var tid = item.tmdbId || item.id || 0;
-        var btn = (st >= 2 && st <= 5)
+        var poster = safePosterUrl(item.posterPath);
+        var tid = safeTmdbId(item.tmdbId || item.id || 0);
+        var btn = (st >= 2 && st <= 5) || !tid
             ? ''
-            : '<button is="emby-button" type="button" class="raised button-submit block seerr-reqbtn seerr-req" data-mt="' + esc(mt) + '" data-id="' + tid + '"><span>Request</span></button>';
+            : '<button is="emby-button" type="button" class="raised button-submit block seerr-reqbtn seerr-req" data-mt="' + mt + '" data-id="' + tid + '"><span>Request</span></button>';
         return (
-            '<div class="seerr-card" tabindex="0" data-mt="' + esc(mt) + '" data-tid="' + tid + '" data-title="' + esc(title) + '">' +
+            '<div class="seerr-card" tabindex="0" data-mt="' + mt + '" data-tid="' + tid + '" data-title="' + esc(title) + '">' +
             '<div class="seerr-poster">' +
             (poster
-                ? '<img loading="lazy" src="' + poster + '" alt="">'
+                ? '<img loading="lazy" src="' + esc(poster) + '" alt="">'
                 : '<div class="seerr-noposter">🎬</div>') +
             '</div>' +
             '<div class="seerr-meta"><span class="seerr-t">' + esc(title) + '</span>' +
@@ -287,7 +305,7 @@ define([
             var html = d.results.map(function (req) {
                 var m = req.media || {};
                 var title = req.is4k ? (m.title4k || m.title) : (m.title || m.name);
-                var poster = (req.is4k ? (m.posterPath4k || m.posterPath) : m.posterPath) || '';
+                var poster = safePosterUrl((req.is4k ? (m.posterPath4k || m.posterPath) : m.posterPath) || '');
                 var who = req.requestedBy && req.requestedBy.displayName
                     ? '<span class="seerr-y">by ' + esc(req.requestedBy.displayName) + '</span>'
                     : '';
@@ -296,7 +314,7 @@ define([
                     '<div class="seerr-card" tabindex="0">' +
                     '<div class="seerr-poster">' +
                     (poster
-                        ? '<img loading="lazy" src="' + TMDB + poster + '" alt="">'
+                        ? '<img loading="lazy" src="' + esc(poster) + '" alt="">'
                         : '<div class="seerr-noposter">🎬</div>') +
                     '</div>' +
                     '<div class="seerr-meta"><span class="seerr-t">' + esc(title) + '</span>' +
@@ -312,7 +330,9 @@ define([
     };
 
     View.prototype.request = function (btn, mt, id) {
-        if (!id) return;
+        mt = safeMediaType(mt);
+        id = safeTmdbId(id);
+        if (!mt || !id) return;
         var label = btn.querySelector('span') || btn;
         btn.disabled = true;
         label.textContent = 'Sending…';
@@ -324,6 +344,8 @@ define([
             label.textContent = 'Retry';
             var msg = 'Request failed';
             try {
+                if (err && err.status === 429) msg = 'Too many requests — slow down';
+                if (err && err.status === 403) msg = 'Not allowed';
                 if (err && err.responseText) {
                     var j = JSON.parse(err.responseText);
                     if (j && j.error) msg = j.error;
@@ -334,10 +356,10 @@ define([
     };
 
     View.prototype.openRecs = function (el) {
-        var mt = el.getAttribute('data-mt');
-        var tid = el.getAttribute('data-tid');
+        var mt = safeMediaType(el.getAttribute('data-mt'));
+        var tid = safeTmdbId(el.getAttribute('data-tid'));
         var title = el.getAttribute('data-title') || '';
-        if (!tid || tid === '0') return;
+        if (!mt || !tid) return;
 
         var modal = this.view.querySelector('#seerrModal');
         var body = this.view.querySelector('#seerrModalBody');

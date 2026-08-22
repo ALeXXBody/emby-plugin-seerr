@@ -20,7 +20,8 @@
             <div class="inputContainer">
                 <label class="inputLabel" for="AllowedUsers">Allowed users (optional)</label>
                 <input is="emby-input" id="AllowedUsers" type="text" placeholder="alice,bob" />
-                <div class="fieldDescription">Comma separated Emby user names allowed to use the request UI. Leave empty for everyone.</div>
+                <div class="fieldDescription">Comma-separated Emby user names. Empty = every logged-in user. Enforced on all /Seerr API calls.</div>
+                <div class="fieldDescription" style="margin-top:8px;color:#c9a227;">Security: requests are created in Seerr as the API-key owner (not the Emby user). Prefer a least-privilege Seerr key. Seerr URL must be http(s); loopback/link-local/metadata hosts are blocked.</div>
             </div>
 
             <button is="emby-button" type="submit" class="raised button-submit block">
