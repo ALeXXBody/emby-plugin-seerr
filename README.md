@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="https://buymeacoffee.com/ALeXXBody" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+</p>
+
 # Emby.Plugin.Seerr
 
 [![Build](https://github.com/ALeXXBody/emby-plugin-seerr/actions/workflows/build.yml/badge.svg)](https://github.com/ALeXXBody/emby-plugin-seerr/actions/workflows/build.yml)
