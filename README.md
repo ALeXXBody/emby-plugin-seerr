@@ -230,8 +230,15 @@ reference DLLs — see the [Actions tab](../../actions).
 
 ## Support
 
-If this plugin is useful to you, you can [buy me a coffee](https://buymeacoffee.com/alexxbody).
+<div align="center">
 
+### ☕ [Buy Me A Coffee — ALeXXBody](https://buymeacoffee.com/alexxbody)
+
+*All support goes into hardware parts and tokens for building more free tools for the community.*
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-alexxbody-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/alexxbody)
+
+</div>
 ## License
 
 [MIT](LICENSE)
